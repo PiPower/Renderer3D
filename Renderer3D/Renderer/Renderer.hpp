@@ -17,7 +17,7 @@ public:
 		HWND hwnd,
 		void* renderer);
 private:
-	static VkBool32 vbDebugVal(
+	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -25,15 +25,15 @@ private:
 
 	void InitVulkan();
 
-	bool checkSupportForExt(
+	bool CheckSupportForExt(
 		const char** requiredExtensions,
 		uint32_t requiredExtensionsNum,
 		const VkExtensionProperties* supportedExtensions,
 		uint32_t supportedExtensionsNum);
 
-	void createQueueIndecies();
+	void CreateQueueIndecies();
 
-	void createSurface(
+	void CreateSurface(
 		HINSTANCE hinstance,
 		HWND hwnd);
 

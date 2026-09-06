@@ -10,14 +10,32 @@ constexpr static uint32_t Q_PRES = 2;
 
 
 const static char* instExt[] = {
-					 VK_KHR_SURFACE_EXTENSION_NAME,
-					 VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-					 VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-					VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
-const static char* devExt[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-const static char* vaLayers[] = { "VK_LAYER_KHRONOS_validation" };
+	VK_KHR_SURFACE_EXTENSION_NAME,
+	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+	VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
+
+const static char* devExt[] = { 
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
+
+const static char* vaLayers[] = { 
+	"VK_LAYER_KHRONOS_validation" };
 
 using namespace std;
+
+
+inline static VkDeviceQueueCreateInfo CreateQueueInfo(
+	uint32_t queueFamilyIndex,
+	uint32_t count,
+	float* priority)
+{
+	VkDeviceQueueCreateInfo queueInfo = {};
+	queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueInfo.queueFamilyIndex = queueFamilyIndex;
+	queueInfo.queueCount = count;
+	queueInfo.pQueuePriorities = priority;
+	return queueInfo;
+}
 
 Renderer::Renderer(
 	HINSTANCE hinstance, 
@@ -26,8 +44,9 @@ Renderer::Renderer(
 	windowHwnd(hwnd)
 {
 	InitVulkan();
-	createSurface(hinstance, hwnd);
+	CreateSurface(hinstance, hwnd);
 	PickPhysicalDevice();
+	CreateLogicalDevice();
 }
 
 void Renderer::OnResize(
@@ -44,7 +63,7 @@ void Renderer::InitVulkan()
 	vector<VkExtensionProperties> instExtSupported(propCount);
 	EXIT_ON_VK_ERROR(vkEnumerateInstanceExtensionProperties(nullptr, &propCount, instExtSupported.data()));
 	uint32_t elemCount = sizeof(instExt) / sizeof(const char*);
-	if (!checkSupportForExt(instExt, elemCount, instExtSupported.data(), (uint32_t)instExtSupported.size()))
+	if (!CheckSupportForExt(instExt, elemCount, instExtSupported.data(), (uint32_t)instExtSupported.size()))
 	{
 		MessageBox(NULL, L"\nUnsupported extension found! \n", NULL, MB_OK);
 		exit(-1);
@@ -56,7 +75,7 @@ void Renderer::InitVulkan()
 	debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	debugInfo.pfnUserCallback = vbDebugVal;
+	debugInfo.pfnUserCallback = VbDebugVal;
 
 	VkApplicationInfo appInfo;
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -79,7 +98,7 @@ void Renderer::InitVulkan()
 	EXIT_ON_VK_ERROR(vkCreateInstance(&instanceInfo, nullptr, &instance));
 }
 
-bool Renderer::checkSupportForExt(
+bool Renderer::CheckSupportForExt(
 	const char** requiredExtensions, 
 	uint32_t requiredExtensionsNum, 
 	const VkExtensionProperties* supportedExtensions, 
@@ -112,7 +131,7 @@ bool Renderer::checkSupportForExt(
 	return false;
 }
 
-void Renderer::createQueueIndecies()
+void Renderer::CreateQueueIndecies()
 {
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(phDev, &queueFamilyCount, nullptr);
@@ -123,7 +142,7 @@ void Renderer::createQueueIndecies()
 	queueIdx[1] = -1;
 	queueIdx[2] = -1;
 
-	for (int64_t i = 0; i < queueFamilies.size(); i++)
+	for (int64_t i = 0; i < (int64_t)queueFamilies.size(); i++)
 	{
 		if (queueIdx[Q_GRAPHICS] == -1 && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) > 0)
 		{
@@ -136,7 +155,7 @@ void Renderer::createQueueIndecies()
 		}
 
 		VkBool32 surfaceSupport;
-		EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfaceSupportKHR(phDev, i, surface, &surfaceSupport));
+		EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfaceSupportKHR(phDev, (uint32_t)i, surface, &surfaceSupport));
 		if (queueIdx[Q_PRES] == -1 && surfaceSupport)
 		{
 			queueIdx[Q_PRES] = i;
@@ -148,14 +167,14 @@ void Renderer::createQueueIndecies()
 		}
 	}
 
-	if (queueIdx[0] != -1 && queueIdx[1] != -1 && queueIdx[2] != -1)
+	if (queueIdx[0] == -1 || queueIdx[1] == -1 || queueIdx[2] == -1)
 	{
 		MessageBox(NULL, L"Required queue is not supported in the system \n", NULL, MB_OK);
 		exit(-1);
 	}
 }
 
-void Renderer::createSurface(
+void Renderer::CreateSurface(
 	HINSTANCE hinstance, 
 	HWND hwnd)
 {
@@ -169,7 +188,7 @@ void Renderer::createSurface(
 	EXIT_ON_VK_ERROR(vkCreateWin32SurfaceKHR(instance, &surfInfo, nullptr, &surface));
 }
 
-VkBool32 Renderer::vbDebugVal(
+VkBool32 Renderer::VbDebugVal(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -198,7 +217,10 @@ void Renderer::PickPhysicalDevice()
 		vkGetPhysicalDeviceProperties(dev, &props);
 		vkGetPhysicalDeviceFeatures(dev, &features);
 
-		if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && features.shaderFloat64 && features.samplerAnisotropy && features.fillModeNonSolid)
+		if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && 
+			features.shaderFloat64 && 
+			features.samplerAnisotropy &&
+			features.fillModeNonSolid)
 		{
 			phDev = dev;
 			return;
@@ -210,20 +232,58 @@ void Renderer::PickPhysicalDevice()
 
 void Renderer::CreateLogicalDevice()
 {
+	CreateQueueIndecies();
 
+	uint32_t propCount;
+	EXIT_ON_VK_ERROR(vkEnumerateDeviceExtensionProperties(phDev, nullptr, &propCount, nullptr));
+	vector<VkExtensionProperties> devExtSupported(propCount);
+	EXIT_ON_VK_ERROR(vkEnumerateDeviceExtensionProperties(phDev, nullptr, &propCount, devExtSupported.data()));
+	uint32_t extCount = sizeof(devExt) / sizeof(const char*);
+	if (!CheckSupportForExt(devExt, extCount, devExtSupported.data(), (uint32_t)devExtSupported.size()))
+	{
+		MessageBox(NULL, L"\nUnsupported extension found! \n", NULL, MB_OK);
+		exit(-1);
+	}
 
+	float priority[3] = { 1.0f, 1.0f, 1.0f };
+	uint32_t infoCount = 1;
 	VkDeviceQueueCreateInfo queueInfo[3] = {};
-	queueInfo[Q_GRAPHICS].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueInfo[Q_GRAPHICS] = CreateQueueInfo((uint32_t)queueIdx[Q_GRAPHICS], 1, priority);
+	if (queueIdx[Q_COMPUTE] != queueIdx[Q_GRAPHICS])
+	{
+		queueInfo[infoCount] = CreateQueueInfo((uint32_t)queueIdx[Q_COMPUTE], 1, priority);
+		infoCount++;
+	}
+	else
+	{
+		queueInfo[Q_GRAPHICS].queueCount++;
+	}
 
-	queueInfo[Q_COMPUTE].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	if (queueIdx[Q_PRES] != queueIdx[Q_GRAPHICS] && queueIdx[Q_PRES] != queueIdx[Q_COMPUTE])
+	{
+		queueInfo[infoCount] = CreateQueueInfo((uint32_t)queueIdx[Q_PRES], 1, priority);
+		infoCount++;
+	}
+	else
+	{
+		queueIdx[Q_PRES] == queueIdx[Q_GRAPHICS] ? 
+			queueInfo[Q_GRAPHICS].queueCount++ : queueInfo[Q_COMPUTE].queueCount++;
+	}
 
-	queueInfo[Q_PRES].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	VkPhysicalDeviceFeatures features = {};
+	features.samplerAnisotropy = VK_TRUE;
+	features.fillModeNonSolid = VK_TRUE;
 
 	VkDeviceCreateInfo devInfo = {};
 	devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	devInfo.queueCreateInfoCount = infoCount;
+	devInfo.pQueueCreateInfos = queueInfo;
+	devInfo.ppEnabledLayerNames = vaLayers;
+	devInfo.enabledExtensionCount = extCount;
+	devInfo.ppEnabledExtensionNames = devExt;
+	devInfo.pEnabledFeatures = &features;
 
-
-	EXIT_ON_VK_ERROR(vkCreateDevice(phDev, nullptr, nullptr, &lgDev));
+	EXIT_ON_VK_ERROR(vkCreateDevice(phDev, &devInfo, nullptr, &lgDev));
 }
 
 void Renderer::OnResize(HWND hwnd)
