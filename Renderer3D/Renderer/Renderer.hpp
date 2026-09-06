@@ -4,7 +4,22 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
 #include <inttypes.h>
-#include "RenderUtils.hpp"
+
+enum class QueueType
+{
+	Graphics = 0,
+	Compute = 1,
+	Presentation = 2
+};
+
+struct Swapchain
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+	std::vector<VkImage> images;
+	std::vector<VkImageView> views;
+};
 
 class Renderer
 {
@@ -16,6 +31,11 @@ public:
 	static void OnResize(
 		HWND hwnd,
 		void* renderer);
+
+	inline VkFormat GetSwapchainFormat() const
+	{
+		return VK_FORMAT_R8G8B8A8_UNORM;
+	}
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -41,6 +61,10 @@ private:
 
 	void CreateLogicalDevice();
 
+	void querySwapChainSupport();
+
+	void CreateSwapchain();
+
 	void OnResize(HWND hwnd);
 
 private:
@@ -51,5 +75,6 @@ private:
 	VkDevice lgDev;
 	int64_t queueIdx[3];
 	VkQueue queues[3];
+	Swapchain swc;
 };
 

@@ -4,9 +4,9 @@
 #define EXIT_ON_VK_ERROR(expr){VkResult __result__ = (expr); if(__result__ != VK_SUCCESS){\
 	MessageBox(NULL, L"vkResult is error\nLINE: " STRINGIFY_(__LINE__) "\nFILE: " STRINGIFY_(__FILE__), NULL, MB_OK); exit(-1); }}
 
-constexpr static uint32_t Q_GRAPHICS = 0;
-constexpr static uint32_t Q_COMPUTE= 1;
-constexpr static uint32_t Q_PRES = 2;
+constexpr static uint32_t Q_GRAPHICS = (uint32_t)QueueType::Graphics;
+constexpr static uint32_t Q_COMPUTE= (uint32_t)QueueType::Compute;
+constexpr static uint32_t Q_PRES = (uint32_t)QueueType::Presentation;
 
 
 const static char* instExt[] = {
@@ -41,12 +41,13 @@ Renderer::Renderer(
 	HINSTANCE hinstance, 
 	HWND hwnd)
 	:
-	windowHwnd(hwnd)
+	windowHwnd(hwnd), swc({})
 {
 	InitVulkan();
 	CreateSurface(hinstance, hwnd);
 	PickPhysicalDevice();
 	CreateLogicalDevice();
+	CreateSwapchain();
 }
 
 void Renderer::OnResize(
@@ -284,6 +285,124 @@ void Renderer::CreateLogicalDevice()
 	devInfo.pEnabledFeatures = &features;
 
 	EXIT_ON_VK_ERROR(vkCreateDevice(phDev, &devInfo, nullptr, &lgDev));
+}
+
+void Renderer::querySwapChainSupport()
+{
+	EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phDev, surface, &swc.capabilities));
+
+	uint32_t formatCount;
+	EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfaceFormatsKHR(phDev, surface, &formatCount, nullptr));
+	if (formatCount != 0)
+	{
+		swc.formats.resize(formatCount);
+		EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfaceFormatsKHR(phDev, surface, &formatCount, swc.formats.data()));
+	}
+
+	uint32_t presentModeCount;
+	EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfacePresentModesKHR(phDev, surface, &presentModeCount, nullptr));
+	if (presentModeCount != 0)
+	{
+		swc.presentModes.resize(presentModeCount);
+		EXIT_ON_VK_ERROR(vkGetPhysicalDeviceSurfacePresentModesKHR(phDev, surface, &presentModeCount, swc.presentModes.data()));
+	}
+
+}
+
+void Renderer::CreateSwapchain()
+{
+	querySwapChainSupport();
+
+	size_t i;
+	for (i = 0; i < swc.formats.size(); i++)
+	{
+		if (swc.formats[i].format == GetSwapchainFormat())
+		{
+			break;
+		}
+	}
+	if (i == swc.formats.size())
+	{
+		MessageBox(NULL, L"Unsupported VK_FORMAT_R8G8B8A8_UNORM! \n", NULL, MB_OK);
+		exit(-1);
+	}
+
+
+	uint32_t imgCount = swc.capabilities.minImageCount + 1 <= swc.capabilities.maxImageCount ?
+		swc.capabilities.minImageCount + 1 :
+		swc.capabilities.minImageCount;
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+	VkSwapchainCreateInfoKHR info = {};
+	info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	info.surface = surface;
+	info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+	info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	info.imageArrayLayers = 1;
+	info.imageExtent = swc.capabilities.currentExtent;
+	info.minImageCount = imgCount;
+	info.preTransform = swc.capabilities.currentTransform;
+	info.imageFormat = swc.formats[i].format;
+	info.imageColorSpace = swc.formats[i].colorSpace;
+	info.clipped = VK_FALSE;
+	info.oldSwapchain = VK_NULL_HANDLE;
+
+	uint32_t familyCount = 1;
+	uint32_t queueFamilies[3] = { (uint32_t)queueIdx[Q_GRAPHICS], 0, 0 };
+
+	if (queueIdx[Q_COMPUTE] != queueIdx[Q_GRAPHICS])
+	{
+		queueFamilies[familyCount] = (uint32_t)queueIdx[Q_COMPUTE];
+		familyCount++;
+	}
+	if (queueIdx[Q_PRES] != queueIdx[Q_GRAPHICS] && queueIdx[Q_PRES] != queueIdx[Q_COMPUTE])
+	{
+		queueFamilies[familyCount] = (uint32_t)queueIdx[Q_PRES];
+		familyCount++;
+	}
+
+	if (familyCount > 1)
+	{
+		info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		info.queueFamilyIndexCount = familyCount;
+		info.pQueueFamilyIndices = queueFamilies;
+	}
+	else
+	{
+		info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		info.queueFamilyIndexCount = 0;
+		info.pQueueFamilyIndices = nullptr; 
+	}
+
+	EXIT_ON_VK_ERROR(vkCreateSwapchainKHR(lgDev, &info, nullptr, &swapchain));
+
+	uint32_t imageCount;
+	EXIT_ON_VK_ERROR(vkGetSwapchainImagesKHR(lgDev, swapchain, &imageCount, nullptr));
+	swc.images.resize(imageCount);
+	EXIT_ON_VK_ERROR(vkGetSwapchainImagesKHR(lgDev, swapchain, &imageCount, swc.images.data()));
+
+	swc.views.resize(swc.images.size());
+	for (size_t i = 0; i < swc.images.size(); i++)
+	{
+		VkImageViewCreateInfo imgInfo = {};
+		imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		imgInfo.image = swc.images[i];
+		imgInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		imgInfo.format = GetSwapchainFormat();
+		imgInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imgInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imgInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imgInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imgInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imgInfo.subresourceRange.baseMipLevel = 0;
+		imgInfo.subresourceRange.levelCount = 1;
+		imgInfo.subresourceRange.baseArrayLayer = 0;
+		imgInfo.subresourceRange.layerCount = 1;
+
+		EXIT_ON_VK_ERROR(vkCreateImageView(lgDev, &imgInfo, nullptr, &swc.views[i]));
+	}
+
+
 }
 
 void Renderer::OnResize(HWND hwnd)
