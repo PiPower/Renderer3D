@@ -1,8 +1,9 @@
 #include "Renderer.hpp"
 #pragma comment(lib,"C:\\VulkanSDK\\1.4.304.1\\Lib\\vulkan-1.lib")
 #define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
 #define EXIT_ON_VK_ERROR(expr){VkResult __result__ = (expr); if(__result__ != VK_SUCCESS){\
-	MessageBox(NULL, L"vkResult is error\nLINE: " STRINGIFY_(__LINE__) "\nFILE: " STRINGIFY_(__FILE__), NULL, MB_OK); exit(-1); }}
+	MessageBox(NULL, L"vkResult is error\nLINE: " STRINGIFY(__LINE__) "\nFILE: " STRINGIFY(__FILE__), NULL, MB_OK); exit(-1); }}
 
 constexpr static uint32_t Q_GRAPHICS = (uint32_t)QueueType::Graphics;
 constexpr static uint32_t Q_COMPUTE= (uint32_t)QueueType::Compute;
@@ -47,7 +48,15 @@ Renderer::Renderer(
 	CreateSurface(hinstance, hwnd);
 	PickPhysicalDevice();
 	CreateLogicalDevice();
+
+	vkGetDeviceQueue(lgDev, (uint32_t)queueIdx[Q_GRAPHICS], 0, &queues[Q_GRAPHICS]);
+	vkGetDeviceQueue(lgDev, (uint32_t)queueIdx[Q_COMPUTE], 1, &queues[Q_COMPUTE]);
+	vkGetDeviceQueue(lgDev, (uint32_t)queueIdx[Q_PRES], 0, &queues[Q_PRES]);
+
 	CreateSwapchain();
+	CreateCommandStructs();
+	PrepareRenderingResources();
+	CreateSynchPrim();
 }
 
 void Renderer::OnResize(
@@ -55,6 +64,24 @@ void Renderer::OnResize(
 	void* renderer)
 {
 	((Renderer*)renderer)->OnResize(hwnd);
+}
+
+void Renderer::RenderFrame()
+{
+	//EXIT_ON_VK_ERROR(vkWaitForFences(lgDev, 1, &gfxQueueFinished, VK_TRUE, UINT64_MAX));
+	//EXIT_ON_VK_ERROR(vkResetFences(lgDev, 1, &gfxQueueFinished));
+	EXIT_ON_VK_ERROR(vkAcquireNextImageKHR(lgDev, swc.swapchain, UINT64_MAX, imgReady, VK_NULL_HANDLE, &imageIndex));
+
+
+	VkPresentInfoKHR info = {};
+	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	info.swapchainCount = 1;
+	info.pSwapchains = &swc.swapchain;
+	info.pImageIndices = &imageIndex;
+	info.waitSemaphoreCount = 1;
+	info.pWaitSemaphores = &imgReady;
+	EXIT_ON_VK_ERROR(vkQueuePresentKHR(queues[Q_PRES], &info));
+	vkQueueWaitIdle(queues[Q_PRES]);
 }
 
 void Renderer::InitVulkan()
@@ -331,7 +358,7 @@ void Renderer::CreateSwapchain()
 	uint32_t imgCount = swc.capabilities.minImageCount + 1 <= swc.capabilities.maxImageCount ?
 		swc.capabilities.minImageCount + 1 :
 		swc.capabilities.minImageCount;
-	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+
 	VkSwapchainCreateInfoKHR info = {};
 	info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	info.surface = surface;
@@ -374,12 +401,12 @@ void Renderer::CreateSwapchain()
 		info.pQueueFamilyIndices = nullptr; 
 	}
 
-	EXIT_ON_VK_ERROR(vkCreateSwapchainKHR(lgDev, &info, nullptr, &swapchain));
+	EXIT_ON_VK_ERROR(vkCreateSwapchainKHR(lgDev, &info, nullptr, &swc.swapchain));
 
 	uint32_t imageCount;
-	EXIT_ON_VK_ERROR(vkGetSwapchainImagesKHR(lgDev, swapchain, &imageCount, nullptr));
+	EXIT_ON_VK_ERROR(vkGetSwapchainImagesKHR(lgDev, swc.swapchain, &imageCount, nullptr));
 	swc.images.resize(imageCount);
-	EXIT_ON_VK_ERROR(vkGetSwapchainImagesKHR(lgDev, swapchain, &imageCount, swc.images.data()));
+	EXIT_ON_VK_ERROR(vkGetSwapchainImagesKHR(lgDev, swc.swapchain, &imageCount, swc.images.data()));
 
 	swc.views.resize(swc.images.size());
 	for (size_t i = 0; i < swc.images.size(); i++)
@@ -405,6 +432,77 @@ void Renderer::CreateSwapchain()
 
 }
 
+void Renderer::CreateCommandStructs()
+{
+	VkCommandPoolCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	info.queueFamilyIndex = (uint32_t)queueIdx[Q_GRAPHICS];
+
+	EXIT_ON_VK_ERROR(vkCreateCommandPool(lgDev, &info, nullptr, &gfxPool));
+
+	VkCommandBufferAllocateInfo infoCommand = {};
+	infoCommand.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	infoCommand.commandBufferCount = 1;
+	infoCommand.commandPool = gfxPool;
+	infoCommand.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+	EXIT_ON_VK_ERROR(vkAllocateCommandBuffers(lgDev, &infoCommand, &gfxCmd));
+}
+
+void Renderer::PrepareRenderingResources()
+{
+	vector<VkImageMemoryBarrier> barriers;
+	barriers.resize(swc.images.size());
+	for (size_t i = 0; i < swc.images.size(); i++)
+	{
+		barriers[i] = {};
+		barriers[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barriers[i].srcAccessMask = 0;
+		barriers[i].dstAccessMask = 0;
+		barriers[i].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barriers[i].newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		barriers[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barriers[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barriers[i].image = swc.images[i];
+		barriers[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barriers[i].subresourceRange.baseMipLevel = 0;
+		barriers[i].subresourceRange.levelCount = 1;
+		barriers[i].subresourceRange.baseArrayLayer = 0;
+		barriers[i].subresourceRange.layerCount = 1;
+	}
+	VkCommandBufferBeginInfo cmdBuffInfo = {};
+	cmdBuffInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBuffInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	EXIT_ON_VK_ERROR(vkResetCommandBuffer(gfxCmd, 0));
+	EXIT_ON_VK_ERROR(vkBeginCommandBuffer(gfxCmd, &cmdBuffInfo));
+
+	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, (uint32_t)barriers.size(), barriers.data());
+
+	EXIT_ON_VK_ERROR(vkEndCommandBuffer(gfxCmd));
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &gfxCmd;
+	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submitInfo, nullptr));
+	EXIT_ON_VK_ERROR(vkQueueWaitIdle(queues[Q_GRAPHICS]));
+
+}
+
 void Renderer::OnResize(HWND hwnd)
 {
+}
+
+void Renderer::CreateSynchPrim()
+{
+	VkSemaphoreCreateInfo semaphoreInfo{};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	EXIT_ON_VK_ERROR(vkCreateSemaphore(lgDev, &semaphoreInfo, nullptr, &imgReady));
+	EXIT_ON_VK_ERROR(vkCreateSemaphore(lgDev, &semaphoreInfo, nullptr, &renderingFinished));
+
+	VkFenceCreateInfo fenceInfo{};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	EXIT_ON_VK_ERROR(vkCreateFence(lgDev, &fenceInfo, nullptr, &gfxQueueFinished));
 }

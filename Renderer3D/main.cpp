@@ -14,7 +14,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     while (wnd.ProcessMessages() == 0)
     {
         auto t1 = chrono::high_resolution_clock::now();
-
+        renderer.RenderFrame();
         auto t2 = chrono::high_resolution_clock::now();
         chrono::duration duration = t2 - t1;
         dt = (float)duration.count() / 1'000'000'000.0f;

@@ -14,6 +14,7 @@ enum class QueueType
 
 struct Swapchain
 {
+	VkSwapchainKHR swapchain;
 	VkSurfaceCapabilitiesKHR capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
@@ -31,6 +32,8 @@ public:
 	static void OnResize(
 		HWND hwnd,
 		void* renderer);
+
+	void RenderFrame();
 
 	inline VkFormat GetSwapchainFormat() const
 	{
@@ -65,7 +68,13 @@ private:
 
 	void CreateSwapchain();
 
+	void CreateCommandStructs();
+
+	void PrepareRenderingResources();
+
 	void OnResize(HWND hwnd);
+	
+	void CreateSynchPrim();
 
 private:
 	HWND windowHwnd;
@@ -76,5 +85,11 @@ private:
 	int64_t queueIdx[3];
 	VkQueue queues[3];
 	Swapchain swc;
+	VkCommandPool gfxPool;
+	VkCommandBuffer gfxCmd;
+	VkSemaphore imgReady;
+	VkSemaphore renderingFinished;
+	VkFence gfxQueueFinished;
+	uint32_t imageIndex;
 };
 
