@@ -1,9 +1,11 @@
 #pragma once
 
 #include <Windows.h>
+#define  _CRT_SECURE_NO_WARNINGS
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
 #include <inttypes.h>
+#include "RenderGraph.hpp"
 
 enum class QueueType
 {
