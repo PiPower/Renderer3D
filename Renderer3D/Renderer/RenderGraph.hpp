@@ -18,6 +18,13 @@ struct ShaderDesc
 	VkShaderModule bytecode;
 };
 
+struct PipelineInputDesc
+{
+	VkPipelineVertexInputStateCreateInfo info = {};
+	std::vector<VkVertexInputBindingDescription> bindings;
+	std::vector<VkVertexInputAttributeDescription> attributes;
+};
+
 class RenderGraph
 {
 public:
@@ -38,6 +45,21 @@ public:
 
 	void Compile(Renderer* renderer);
 
+	inline ExecutionGraph* GetExecutionGraph() const { return execGraph; }
+
+	ImageResource* QueryImage(const std::string& name);
+
+	BufferResource* QueryBuffer(const std::string& name);
+
+	ShaderDesc* QueryShader(const std::string& name);
+
+	void DescribeVertexBuffer(
+		const std::string& name,
+		uint32_t stride,
+		const std::vector<VkFormat>& vertexInputFormats,
+		const std::vector<uint32_t>& formatOffsets);
+
+private:
 	VkPipeline CompilePipeline(
 		Renderer* renderer, 
 		RenderPass* renderPass);
@@ -46,15 +68,7 @@ public:
 		Renderer* renderer,
 		RenderPass* renderPass);
 
-
-
-	inline ExecutionGraph* GetExecutionGraph() const { return execGraph; }
-
-	ImageResource* QueryImage(const std::string& name);
-
-	BufferResource* QueryBuffer(const std::string& name);
-
-	ShaderDesc* QueryShader(const std::string& name);
+	PipelineInputDesc CreatePipelineInput(RenderPass* renderPass);
 
 private:
 	std::vector<RenderPass> renderPasses;

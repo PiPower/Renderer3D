@@ -17,6 +17,7 @@ struct BufferResource
 {
 	Size::Class sizeClass = Size::Absolute;
 	VkBufferUsageFlags usage = 0;
+	VkDeviceSize size = 0;
 	// optional used if this buffer is used as a vertex buffer
 	std::vector<VkFormat> vertexInputFormats;
 	std::vector<uint32_t> formatOffsets;

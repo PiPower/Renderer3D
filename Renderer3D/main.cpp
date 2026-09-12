@@ -4,6 +4,7 @@
 #include "Renderer/Scene.hpp"
 using namespace std;
 
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	Scene scene("D:\\main1_sponza\\NewSponza_Main_glTF_003.gltf");
@@ -18,6 +19,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		{"simple_frag", "main", "shaders/simple.frag"},
 	};  
     RenderGraph rg(bufferNames, imageNames, shaderDescs);
+    rg.DescribeVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rg.DescribeVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rg.DescribeVertexBuffer("texcoord", sizeof(Vec3), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex");
