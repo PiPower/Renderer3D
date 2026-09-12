@@ -155,6 +155,7 @@
     <ClCompile Include="Renderer\RenderGraph.cpp" />
     <ClCompile Include="Renderer\RenderPass.cpp" />
     <ClCompile Include="Renderer\Scene.cpp" />
+    <ClCompile Include="Renderer\ShaderCompiler.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -163,7 +164,12 @@
     <ClInclude Include="Renderer\RenderPass.hpp" />
     <ClInclude Include="Renderer\Resource.hpp" />
     <ClInclude Include="Renderer\Scene.hpp" />
+    <ClInclude Include="Renderer\ShaderCompiler.hpp" />
     <ClInclude Include="Window.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\process.frag" />
+    <None Include="shaders\process.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

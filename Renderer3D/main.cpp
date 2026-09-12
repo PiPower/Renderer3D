@@ -32,6 +32,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     {
         auto t1 = chrono::high_resolution_clock::now();
 
+		renderer.ExecuteGraph(rg.GetExecutionGraph());
         renderer.RenderFrame();
 
         auto t2 = chrono::high_resolution_clock::now();

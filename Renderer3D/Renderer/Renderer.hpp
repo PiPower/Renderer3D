@@ -41,6 +41,8 @@ public:
 	{
 		return VK_FORMAT_R8G8B8A8_UNORM;
 	}
+
+	void ExecuteGraph(ExecutionGraph* exGraph);
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

@@ -17,7 +17,7 @@ struct RenderPass
 
 	void AddOutputImage(const std::string& name);
 
-	void AddBuffer(const std::string& name);
+	void AddUniformBuffer(const std::string& name);
 
 	void AddVertexBuffer(const std::string& name);
 
@@ -26,14 +26,14 @@ struct RenderPass
 private:
 	RenderGraph* rg;
 	bool isGraphicsPass;
-	std::vector<const BufferResource*> vertexBffers;
-	std::vector<const BufferResource*> indexBffers;
+	std::vector<const BufferResource*> vertexBuffers;
+	std::vector<const BufferResource*> indexBuffers;
 	std::vector<const BufferResource*> buffers;
 
 	std::vector<const ImageResource*> inputImages;
 	std::vector<const ImageResource*> outputImages;
 	std::vector<const ImageResource*> textureImages;
 
-	std::string vertexShPath;
-	std::string fragmentShPath;
+	std::string shVertexName;
+	std::string shFragmentName;
 };
