@@ -38,7 +38,7 @@ public:
 		const char* fileName,
 		shaderc_shader_kind shaderKind,
 		const ShaderOptions& options);
-public:
+private:
 	shaderc_compiler_t compiler;
 };
 

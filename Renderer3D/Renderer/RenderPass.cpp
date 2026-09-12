@@ -52,11 +52,11 @@ void RenderPass::AddIndexBuffer(const std::string& name)
 
 void RenderPass::AddVertexShader(const std::string& name)
 {
-	if (!shVertexName.empty())
+	if (!shaderStages[SH_VERTEX].empty())
 	{
 		throw std::runtime_error("Vertex shader already set for this render pass.");
 	}
-
+	shaderStages[SH_VERTEX] = name;
 	ShaderDesc* shader = rg->QueryShader(name); 
 	if (shader == nullptr)
 	{
@@ -67,11 +67,12 @@ void RenderPass::AddVertexShader(const std::string& name)
 
 void RenderPass::AddFragmentShader(const std::string& name)
 {
-	if (!shFragmentName.empty())
+	if (!shaderStages[SH_FRAGMENT].empty())
 	{
 		throw std::runtime_error("Fragment shader already set for this render pass.");
 	}
 
+	shaderStages[SH_FRAGMENT] = name;
 	rg->QueryShader(name); 
 
 	ShaderDesc* shader = rg->QueryShader(name);

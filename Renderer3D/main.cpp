@@ -14,8 +14,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     std::vector<std::string> bufferNames = { "vertex", "normal" , "texcoord", "index", "camera", "object_transform" };
     std::vector<std::string> imageNames = {"output", "skybox"};
 	std::vector<ShaderDesc> shaderDescs = {
-		{"simple_vert", "shaders/simple.vert"},
-		{"simple_frag", "shaders/simple.frag"},
+		{"simple_vert", "main", "shaders/simple.vert"},
+		{"simple_frag", "main", "shaders/simple.frag"},
 	};  
     RenderGraph rg(bufferNames, imageNames, shaderDescs);
 

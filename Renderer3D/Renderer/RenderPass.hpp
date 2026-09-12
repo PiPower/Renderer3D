@@ -4,11 +4,19 @@
 #include <string>
 #include <unordered_map>
 #include "Resource.hpp"
+#include <array>
 
 class RenderGraph;
 
-struct RenderPass
+class RenderPass
 {
+	friend class RenderGraph;
+
+private:
+	static constexpr size_t SH_VERTEX = 0;
+	static constexpr size_t SH_FRAGMENT = 1;
+
+public:
 	RenderPass(RenderGraph* rg, bool isGraphicsPass) : rg(rg), isGraphicsPass(isGraphicsPass){};
 
 	void AddTextureImage(const std::string& name);
@@ -38,6 +46,5 @@ private:
 	std::vector<const ImageResource*> outputImages;
 	std::vector<const ImageResource*> textureImages;
 
-	std::string shVertexName;
-	std::string shFragmentName;
+	std::array<std::string, 2> shaderStages;
 };

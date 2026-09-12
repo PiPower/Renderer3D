@@ -12,8 +12,10 @@ struct ExecutionGraph
 struct ShaderDesc
 {
 	std::string name;
+	std::string entryName;
 	std::string path;
 	VkShaderStageFlagBits stages;
+	VkShaderModule bytecode;
 };
 
 class RenderGraph
@@ -35,6 +37,16 @@ public:
 		VkShaderStageFlagBits shaderStage);
 
 	void Compile(Renderer* renderer);
+
+	VkPipeline CompilePipeline(
+		Renderer* renderer, 
+		RenderPass* renderPass);
+
+	std::vector<VkPipelineShaderStageCreateInfo> CompileShaders(
+		Renderer* renderer,
+		RenderPass* renderPass);
+
+
 
 	inline ExecutionGraph* GetExecutionGraph() const { return execGraph; }
 

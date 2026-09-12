@@ -36,11 +36,9 @@ public:
 
 	void RenderFrame();
 
-	inline VkFormat GetSwapchainFormat() const
-	{
-		return VK_FORMAT_R8G8B8A8_UNORM;
-	}
+	inline VkFormat GetSwapchainFormat() const { return VK_FORMAT_R8G8B8A8_UNORM; }
 
+	inline VkDevice GetDevice() { return lgDev; }
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

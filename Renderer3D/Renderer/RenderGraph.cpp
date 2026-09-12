@@ -1,6 +1,20 @@
 #include "RenderGraph.hpp"
 #include <Windows.h>
 #include <stdexcept>
+#include "ShaderCompiler.hpp"
+
+static inline constexpr shaderc_shader_kind extendKind(
+	VkShaderStageFlags collection,
+	VkShaderStageFlags chosenStage,
+	shaderc_shader_kind rcCollection,
+	shaderc_shader_kind rcStage)
+{
+	if (collection & chosenStage)
+	{
+		return (shaderc_shader_kind)(rcCollection | rcStage);
+	}
+	return rcCollection;
+}
 
 RenderGraph::RenderGraph(
 	const std::vector<std::string>& bufferNames,
@@ -40,6 +54,7 @@ RenderGraph::RenderGraph(
 		shaderBind[shaderDescs[i].name] = shaders.size();
 		shaders.push_back(shaderDescs[i]);
 		shaders.back().stages = (VkShaderStageFlagBits)0;
+		shaders.back().bytecode = VK_NULL_HANDLE;
 	}
 }
 
@@ -68,7 +83,54 @@ void RenderGraph::AddShader(
 
 void RenderGraph::Compile(Renderer* renderer)
 {
+	for (size_t i = 0; i < renderPasses.size(); ++i)
+	{
+		CompilePipeline(renderer, &renderPasses[i]);
+	}
+}
 
+VkPipeline RenderGraph::CompilePipeline(
+	Renderer* renderer, 
+	RenderPass* renderPass)
+{
+	
+	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderer, renderPass);
+
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.stageCount = (uint32_t)shaderStages.size();
+	pipelineInfo.pStages = shaderStages.data();
+
+	return VkPipeline();
+}
+
+std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(
+	Renderer* renderer,
+	RenderPass* renderPass)
+{
+	ShaderCompiler compiler;
+	std::vector<VkPipelineShaderStageCreateInfo> shaderInfo;
+	for (size_t i = 0; i < renderPass->shaderStages.size(); i++)
+	{
+		if (renderPass->shaderStages[i] != "")
+		{
+			ShaderDesc* desc = QueryShader(renderPass->shaderStages[i]);
+			if (desc->bytecode == VK_NULL_HANDLE)
+			{
+				shaderc_shader_kind stages = {};
+				stages = extendKind(desc->stages, VK_SHADER_STAGE_VERTEX_BIT, stages, shaderc_vertex_shader);
+				stages = extendKind(desc->stages, VK_SHADER_STAGE_FRAGMENT_BIT, stages, shaderc_fragment_shader);
+				desc->bytecode = compiler.CompileShaderFromPath(renderer->GetDevice(), nullptr, desc->path.c_str(), desc->entryName.c_str(), stages, {});
+			}
+			shaderInfo.push_back({});
+			VkPipelineShaderStageCreateInfo* info = &shaderInfo.back();
+			info->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			info->stage = desc->stages;
+			info->module = desc->bytecode;
+			info->pName = desc->entryName.c_str();
+		}
+	}
+
+	return shaderInfo;
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)
