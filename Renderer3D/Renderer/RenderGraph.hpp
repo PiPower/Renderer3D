@@ -1,8 +1,8 @@
 #pragma once
-#define  _CRT_SECURE_NO_WARNINGS
 #include <vulkan/vulkan.h>
 #include <unordered_map>
 #include "RenderPass.hpp"
+#include "Renderer.hpp"
 
 struct ExecutionGraph
 {
@@ -13,6 +13,7 @@ struct ShaderDesc
 {
 	std::string name;
 	std::string path;
+	VkShaderStageFlagBits stages;
 };
 
 class RenderGraph
@@ -33,9 +34,9 @@ public:
 		const std::string& entryName,
 		VkShaderStageFlagBits shaderStage);
 
-	void Compile();
+	void Compile(Renderer* renderer);
 
-	ExecutionGraph* GetExecutionGraph() const { return execGraph; }
+	inline ExecutionGraph* GetExecutionGraph() const { return execGraph; }
 
 	ImageResource* QueryImage(const std::string& name);
 

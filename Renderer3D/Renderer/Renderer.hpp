@@ -1,11 +1,10 @@
 #pragma once
 
 #include <Windows.h>
-#define  _CRT_SECURE_NO_WARNINGS
 #define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
+#include <vector>
 #include <inttypes.h>
-#include "RenderGraph.hpp"
 
 enum class QueueType
 {
@@ -42,7 +41,6 @@ public:
 		return VK_FORMAT_R8G8B8A8_UNORM;
 	}
 
-	void ExecuteGraph(ExecutionGraph* exGraph);
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

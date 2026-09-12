@@ -61,7 +61,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\process.vert" />
-    <None Include="shaders\process.frag" />
+    <None Include="shaders\simple.vert" />
+    <None Include="shaders\simple.frag" />
   </ItemGroup>
 </Project>

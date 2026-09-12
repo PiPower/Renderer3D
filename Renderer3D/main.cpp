@@ -1,5 +1,5 @@
 #include "window.hpp"
-#include "Renderer/Renderer.hpp"
+#include "Renderer/RenderGraph.hpp"
 #include <string>
 #include "Renderer/Scene.hpp"
 using namespace std;
@@ -11,28 +11,38 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Renderer renderer(hInstance, wnd.GetWindowHWND());
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
     
-    std::vector<std::string> bufferNames = { "vertex", "normal" , "texcoord", "index"};
+    std::vector<std::string> bufferNames = { "vertex", "normal" , "texcoord", "index", "camera", "object_transform" };
     std::vector<std::string> imageNames = {"output", "skybox"};
-    RenderGraph rg(bufferNames, imageNames);
+	std::vector<ShaderDesc> shaderDescs = {
+		{"simple_vert", "shaders/simple.vert"},
+		{"simple_frag", "shaders/simple.frag"},
+	};  
+    RenderGraph rg(bufferNames, imageNames, shaderDescs);
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex");
     rpSimple->AddVertexBuffer("normal");
     rpSimple->AddVertexBuffer("texcoord");
-	rpSimple->AddIndexBuffer("index");
+    rpSimple->AddIndexBuffer("index");
+
+    rpSimple->AddUniformBuffer("camera");
+    rpSimple->AddUniformBuffer("object_transform");
+
 	rpSimple->AddOutputImage("output");
+	rpSimple->AddVertexShader("simple_vert");
+	rpSimple->AddFragmentShader("simple_frag");
 
     //RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
 	//rpSimple->AddTextureImage("skybox");
     //rpSimple->AddOutputImage("output");
 
+	rg.Compile(&renderer);
 
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)
     {
         auto t1 = chrono::high_resolution_clock::now();
 
-		renderer.ExecuteGraph(rg.GetExecutionGraph());
         renderer.RenderFrame();
 
         auto t2 = chrono::high_resolution_clock::now();

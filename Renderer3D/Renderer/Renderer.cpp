@@ -218,10 +218,6 @@ void Renderer::CreateSurface(
 	EXIT_ON_VK_ERROR(vkCreateWin32SurfaceKHR(instance, &surfInfo, nullptr, &surface));
 }
 
-void Renderer::ExecuteGraph(ExecutionGraph* exGraph)
-{
-}
-
 VkBool32 Renderer::VbDebugVal(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,

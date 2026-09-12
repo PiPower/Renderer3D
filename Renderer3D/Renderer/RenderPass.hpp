@@ -23,6 +23,10 @@ struct RenderPass
 
 	void AddIndexBuffer(const std::string& name);
 
+	void AddVertexShader(const std::string& name);
+
+	void AddFragmentShader(const std::string& name);
+
 private:
 	RenderGraph* rg;
 	bool isGraphicsPass;

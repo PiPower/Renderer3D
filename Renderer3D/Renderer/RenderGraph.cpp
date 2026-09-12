@@ -39,6 +39,7 @@ RenderGraph::RenderGraph(
 		}
 		shaderBind[shaderDescs[i].name] = shaders.size();
 		shaders.push_back(shaderDescs[i]);
+		shaders.back().stages = (VkShaderStageFlagBits)0;
 	}
 }
 
@@ -65,8 +66,9 @@ void RenderGraph::AddShader(
 {
 }
 
-void RenderGraph::Compile()
+void RenderGraph::Compile(Renderer* renderer)
 {
+
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)

@@ -50,3 +50,35 @@ void RenderPass::AddIndexBuffer(const std::string& name)
 	indexBuffers.push_back(buf);
 }
 
+void RenderPass::AddVertexShader(const std::string& name)
+{
+	if (!shVertexName.empty())
+	{
+		throw std::runtime_error("Vertex shader already set for this render pass.");
+	}
+
+	ShaderDesc* shader = rg->QueryShader(name); 
+	if (shader == nullptr)
+	{
+		throw std::runtime_error("Shader with name '" + name + "' does not exist.");
+	}
+	shader->stages = (VkShaderStageFlagBits)(shader->stages | VK_SHADER_STAGE_VERTEX_BIT);
+}
+
+void RenderPass::AddFragmentShader(const std::string& name)
+{
+	if (!shFragmentName.empty())
+	{
+		throw std::runtime_error("Fragment shader already set for this render pass.");
+	}
+
+	rg->QueryShader(name); 
+
+	ShaderDesc* shader = rg->QueryShader(name);
+	if (shader == nullptr)
+	{
+		throw std::runtime_error("Shader with name '" + name + "' does not exist.");
+	}
+	shader->stages = (VkShaderStageFlagBits)(shader->stages | VK_SHADER_STAGE_FRAGMENT_BIT);
+}
+

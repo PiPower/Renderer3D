@@ -1,6 +1,8 @@
 #include "ShaderCompiler.hpp"
 #include <fstream>
 
+#pragma comment(lib, "shaderc_shared.lib")
+
 using namespace std;
 static vector<char> readFile(const char* filename)
 {
