@@ -73,14 +73,6 @@ RenderPass* RenderGraph::CreateRenderPass(
 	return &renderPasses.back();
 }
 
-void RenderGraph::AddShader(
-	const std::string& name,
-	const std::string& path,
-	const std::string& entryName,
-	VkShaderStageFlagBits shaderStage)
-{
-}
-
 void RenderGraph::Compile(Renderer* renderer)
 {
 	for (size_t i = 0; i < renderPasses.size(); ++i)
@@ -93,15 +85,45 @@ VkPipeline RenderGraph::CompilePipeline(
 	Renderer* renderer, 
 	RenderPass* renderPass)
 {
-	
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderer, renderPass);
 	PipelineInputDesc inputDesc = CreatePipelineInput(renderPass);
+	PipelineRenderingDesc renderDesc = CreatePipelineRendering(renderPass);
+
+	VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = 2;
+	dynamicState.pDynamicStates = dynamicStates;
 
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.pNext = &renderDesc.info;
 	pipelineInfo.stageCount = (uint32_t)shaderStages.size();
 	pipelineInfo.pStages = shaderStages.data();
 	pipelineInfo.pVertexInputState = &inputDesc.info;
-	return VkPipeline();
+	pipelineInfo.pInputAssemblyState = &renderPass->asmInfo;
+	pipelineInfo.pTessellationState = nullptr;
+	pipelineInfo.pViewportState = &renderPass->vpInfo;
+	pipelineInfo.pRasterizationState = &renderPass->rasterInfo;
+	pipelineInfo.pMultisampleState = &renderPass->multisampling;
+	pipelineInfo.pDepthStencilState = &renderPass->depthInfo;
+	pipelineInfo.pColorBlendState = &renderPass->colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
+	pipelineInfo.layout = nullptr;
+	pipelineInfo.renderPass = VK_NULL_HANDLE;
+	pipelineInfo.subpass = 0;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineInfo.basePipelineIndex = 0;
+
+	VkPipeline pipeline;
+	VkResult res = vkCreateGraphicsPipelines(renderer->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+	if (res != VK_SUCCESS)
+	{
+		throw std::runtime_error("Pipeline creation failed\n");
+	}
+
+
+	return pipeline;
 }
 
 std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(
@@ -137,6 +159,7 @@ std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(
 PipelineInputDesc RenderGraph::CreatePipelineInput(RenderPass* renderPass)
 {
 	PipelineInputDesc inputDesc = {};
+	uint32_t location = 0;
 	for (size_t i = 0; i < renderPass->vertexBuffers.size(); i++)
 	{
 		const BufferResource& res = *renderPass->vertexBuffers[i];
@@ -153,9 +176,10 @@ PipelineInputDesc RenderGraph::CreatePipelineInput(RenderPass* renderPass)
 
 			VkVertexInputAttributeDescription* attInfo = &inputDesc.attributes.back();
 			attInfo->binding = (uint32_t)i;
-			attInfo->location = (uint32_t)j;
+			attInfo->location = location;
 			attInfo->format = res.vertexInputFormats[j];
 			attInfo->offset = res.formatOffsets[j];
+			location++;
 		}
 	}
 
@@ -166,6 +190,13 @@ PipelineInputDesc RenderGraph::CreatePipelineInput(RenderPass* renderPass)
 	inputDesc.info.pVertexAttributeDescriptions = inputDesc.attributes.data();
 
 	return inputDesc;
+}
+
+PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPass)
+{
+	PipelineRenderingDesc render = {};
+	render.info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	return render;
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)

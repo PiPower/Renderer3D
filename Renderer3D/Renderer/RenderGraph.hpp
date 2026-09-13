@@ -25,6 +25,11 @@ struct PipelineInputDesc
 	std::vector<VkVertexInputAttributeDescription> attributes;
 };
 
+struct PipelineRenderingDesc
+{
+	VkPipelineRenderingCreateInfoKHR info;
+};
+
 class RenderGraph
 {
 public:
@@ -36,12 +41,6 @@ public:
 	RenderPass* CreateRenderPass(
 		const std::string& name,
 		bool isGraphicsPass);
-
-	void AddShader(
-		const std::string& name,
-		const std::string& path,
-		const std::string& entryName,
-		VkShaderStageFlagBits shaderStage);
 
 	void Compile(Renderer* renderer);
 
@@ -70,6 +69,9 @@ private:
 
 	PipelineInputDesc CreatePipelineInput(RenderPass* renderPass);
 
+	PipelineRenderingDesc CreatePipelineRendering(RenderPass* renderPass);
+
+	std::vector<VkPipelineColorBlendAttachmentState> CreateBlendAttachments(RenderPass* renderPass);
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource> imgResource;
