@@ -25,7 +25,7 @@ public:
 
 	void AddInputImage(const std::string& name);
 
-	void AddOutputAttachment(const std::string& name);
+	void AddColorAttachment(const std::string& name);
 
 	void AddDepthImage(const std::string& name);
 

@@ -218,6 +218,16 @@ void Renderer::CreateSurface(
 	EXIT_ON_VK_ERROR(vkCreateWin32SurfaceKHR(instance, &surfInfo, nullptr, &surface));
 }
 
+Image Renderer::AllocateImage(
+	const VkImageCreateInfo& imgInfo,
+	const VkImageViewCreateInfo& viewInfo)
+{
+	Image out = {};
+	EXIT_ON_VK_ERROR(vkCreateImage(lgDev, &imgInfo, nullptr, &out.img));
+
+	return out;
+}
+
 VkBool32 Renderer::VbDebugVal(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,

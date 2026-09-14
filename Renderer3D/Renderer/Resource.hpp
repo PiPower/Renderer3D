@@ -1,21 +1,13 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <stdint.h>
+#include <vector>
 
-namespace Size
-{
-	enum Class
-	{
-		Absolute,
-		SwapchainRelative,
-		InputRelative
-	};
-}
-
+constexpr uint32_t SWAPCHAIN_RELATIVE = 0xffffffff;
 // struct that describes a usage of a buffer resource in a render graph.
 struct BufferResource
 {
-	Size::Class sizeClass = Size::Absolute;
+	uint8_t isDefined : 1 = 0;
 	VkBufferUsageFlags usage = 0;
 	VkDeviceSize size = 0;
 	// optional used if this buffer is used as a vertex buffer
@@ -25,9 +17,14 @@ struct BufferResource
 
 // struct that describes a usage of a image resource in a render graph.
 struct ImageResource
-{
+{;
+	uint8_t isDefined : 1 = 0;
+	uint32_t width = 0;
+	uint32_t height = 0;
+	uint32_t layers = 0;
 	VkFormat format = VK_FORMAT_UNDEFINED;
-	VkImageLayout processingLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VkImageLayout outputLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkSampleCountFlagBits samples = (VkSampleCountFlagBits)0;
+	VkImageViewType viewType = (VkImageViewType)0;
+	VkImageLayout inStageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageUsageFlags aux_usage = 0;
 };

@@ -16,6 +16,27 @@ static inline constexpr shaderc_shader_kind extendKind(
 	return rcCollection;
 }
 
+static VkImageType getVkImageType(VkImageViewType viewType) {
+	switch (viewType) {
+	case VK_IMAGE_VIEW_TYPE_1D:
+	case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+		return VK_IMAGE_TYPE_1D;
+
+	case VK_IMAGE_VIEW_TYPE_2D:
+	case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+	case VK_IMAGE_VIEW_TYPE_CUBE:
+	case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+		return VK_IMAGE_TYPE_2D;
+
+	case VK_IMAGE_VIEW_TYPE_3D:
+		return VK_IMAGE_TYPE_3D;
+
+	default:
+		return VK_IMAGE_TYPE_MAX_ENUM;
+	}
+}
+
+
 RenderGraph::RenderGraph(
 	const std::vector<std::string>& bufferNames,
 	const std::vector<std::string>& imageNames,
@@ -75,6 +96,7 @@ RenderPass* RenderGraph::CreateRenderPass(
 
 void RenderGraph::Compile(Renderer* renderer)
 {
+	AllocateResources(renderer);
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
 		CompilePipeline(renderer, &renderPasses[i]);
@@ -199,6 +221,52 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 	return render;
 }
 
+void RenderGraph::AllocateResources(Renderer* renderer)
+{
+	VkSurfaceCapabilitiesKHR capabilities = renderer->GetSwapchainCapabilities();
+	for (size_t i = 0; i < imgResource.size(); i++)
+	{
+		ImageResource* img = &imgResource[i];
+		VkImageCreateInfo imgInfo = {};
+		VkImageViewCreateInfo viewInfo = {};
+		VkExtent3D imgExtent = {};
+		imgExtent.width = img->width == SWAPCHAIN_RELATIVE ? capabilities.currentExtent.width : img->width;
+		imgExtent.height = img->height == SWAPCHAIN_RELATIVE ? capabilities.currentExtent.width : img->height;
+		imgExtent.depth = 1;
+
+		imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imgInfo.pNext = nullptr;
+		imgInfo.flags = 0;
+		imgInfo.imageType = getVkImageType(img->viewType);
+		imgInfo.format = img->format;
+		imgInfo.extent = imgExtent;
+		imgInfo.mipLevels = 1;
+		imgInfo.arrayLayers = img->layers;
+		imgInfo.samples = img->samples;
+		imgInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imgInfo.usage = img->aux_usage;
+		imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imgInfo.queueFamilyIndexCount = 0;
+		imgInfo.pQueueFamilyIndices = nullptr;
+		imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.flags;
+		viewInfo.image = VK_NULL_HANDLE; // set inside renderer->AllocateImage
+		viewInfo.viewType = img->viewType;
+		viewInfo.format = img->format;
+		viewInfo.components = VkComponentMapping{
+			.r = VK_COMPONENT_SWIZZLE_IDENTITY, 
+			.g = VK_COMPONENT_SWIZZLE_IDENTITY, 
+			.b = VK_COMPONENT_SWIZZLE_IDENTITY, 
+			.a =VK_COMPONENT_SWIZZLE_IDENTITY };
+		viewInfo.subresourceRange;
+
+		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo);
+	}
+
+}
+
 ImageResource* RenderGraph::QueryImage(const std::string& name)
 {
 	auto it = imageBind.find(name);
@@ -254,12 +322,40 @@ void RenderGraph::DescribeVertexBuffer(
 	}
 
 	BufferResource* buff = QueryBuffer(name);
-	if (buff->vertexInputFormats.size() > 0)
+	if (buff->isDefined > 0)
 	{
 		throw std::runtime_error("vertex buffer redefinition\n");
 	}
-
+	buff->isDefined = 1;
 	buff->size = stride;
 	buff->vertexInputFormats = vertexInputFormats;
 	buff->formatOffsets = formatOffsets;
+}
+
+void RenderGraph::DescribeImage(
+	const std::string& name, 
+	uint32_t width, 
+	uint32_t height, 
+	uint32_t layers, 
+	VkFormat format, 
+	VkSampleCountFlagBits samples, 
+	VkImageViewType viewType)
+{
+	ImageResource* img = QueryImage(name);
+	if (img->isDefined > 0)
+	{
+		throw std::runtime_error("image redefinition\n");
+	}
+	if (width == SWAPCHAIN_RELATIVE || height == SWAPCHAIN_RELATIVE)
+	{
+		swcRelativeImages.push_back(img);
+	}
+
+	img->isDefined = 1;
+	img->width = width;
+	img->height = height;
+	img->layers = layers;
+	img->format = format;
+	img->samples = samples;
+	img->viewType = viewType;
 }

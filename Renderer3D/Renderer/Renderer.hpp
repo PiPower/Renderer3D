@@ -23,6 +23,13 @@ struct Swapchain
 	std::vector<VkImageView> views;
 };
 
+struct Image
+{
+	VkDeviceMemory mem;
+	VkImage img;
+	VkImageView imgView;
+};
+
 class Renderer
 {
 public:
@@ -36,9 +43,15 @@ public:
 
 	void RenderFrame();
 
+	Image AllocateImage(
+		const VkImageCreateInfo& imgInfo,
+		const VkImageViewCreateInfo& viewInfo);
+
 	inline VkFormat GetSwapchainFormat() const { return VK_FORMAT_R8G8B8A8_UNORM; }
 
 	inline VkDevice GetDevice() { return lgDev; }
+
+	inline VkSurfaceCapabilitiesKHR GetSwapchainCapabilities() { return swc.capabilities; }
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

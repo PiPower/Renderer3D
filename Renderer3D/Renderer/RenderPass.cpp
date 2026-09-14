@@ -64,8 +64,16 @@ void RenderPass::AddInputImage(const std::string& name)
 {
 }
 
-void RenderPass::AddOutputAttachment(const std::string& name)
+void RenderPass::AddColorAttachment(const std::string& name)
 {
+	ImageResource* img = rg->QueryImage(name);
+	if (img == nullptr)
+	{
+		throw std::runtime_error("Image does not exist\n");
+	}
+
+	img->aux_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
 	blendAttachmets.push_back({});
 	VkPipelineColorBlendAttachmentState* blend = &blendAttachmets.back();
 	blend->colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;

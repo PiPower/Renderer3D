@@ -58,6 +58,15 @@ public:
 		const std::vector<VkFormat>& vertexInputFormats,
 		const std::vector<uint32_t>& formatOffsets);
 
+	void DescribeImage(
+		const std::string& name,
+		uint32_t width,
+		uint32_t height,
+		uint32_t layers,
+		VkFormat format,
+		VkSampleCountFlagBits samples,
+		VkImageViewType viewType);
+
 private:
 	VkPipeline CompilePipeline(
 		Renderer* renderer, 
@@ -71,7 +80,7 @@ private:
 
 	PipelineRenderingDesc CreatePipelineRendering(RenderPass* renderPass);
 
-	std::vector<VkPipelineColorBlendAttachmentState> CreateBlendAttachments(RenderPass* renderPass);
+	void AllocateResources(Renderer* renderer);
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource> imgResource;
@@ -82,6 +91,7 @@ private:
 	std::unordered_map<std::string, size_t> bufferBind;
 	std::unordered_map<std::string, size_t> imageBind;
 	std::unordered_map<std::string, size_t> shaderBind;
+	std::vector<ImageResource*> swcRelativeImages;
 
 	ExecutionGraph* execGraph;
 };
