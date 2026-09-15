@@ -16,6 +16,40 @@ static inline constexpr shaderc_shader_kind extendKind(
 	return rcCollection;
 }
 
+static VkImageAspectFlags GetAspectMask(VkFormat format)
+{
+	VkImageAspectFlags aspectMask = 0;
+
+	switch (format) {
+		// Depth + stencil
+	case VK_FORMAT_D16_UNORM_S8_UINT:
+	case VK_FORMAT_D24_UNORM_S8_UINT:
+	case VK_FORMAT_D32_SFLOAT_S8_UINT:
+		aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+		aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		break;
+
+		// Depth only
+	case VK_FORMAT_D16_UNORM:
+	case VK_FORMAT_X8_D24_UNORM_PACK32:
+	case VK_FORMAT_D32_SFLOAT:
+		aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+		break;
+
+		// Stencil only
+	case VK_FORMAT_S8_UINT:
+		aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		break;
+
+		// Everything else
+	default:
+		aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
+		break;
+	}
+
+	return aspectMask;
+}
+
 static VkImageType getVkImageType(VkImageViewType viewType) {
 	switch (viewType) {
 	case VK_IMAGE_VIEW_TYPE_1D:
@@ -42,7 +76,7 @@ RenderGraph::RenderGraph(
 	const std::vector<std::string>& imageNames,
 	const std::vector<ShaderDesc>& shaderDescs)
 	:
-	execGraph(nullptr)
+	execGraph({})
 {
 
 	for (size_t i = 0; i < bufferNames.size(); ++i)
@@ -227,6 +261,11 @@ void RenderGraph::AllocateResources(Renderer* renderer)
 	for (size_t i = 0; i < imgResource.size(); i++)
 	{
 		ImageResource* img = &imgResource[i];
+		if (img->isDefined == 0)
+		{
+			execGraph.imageResources.push_back({});
+			continue;
+		}
 		VkImageCreateInfo imgInfo = {};
 		VkImageViewCreateInfo viewInfo = {};
 		VkExtent3D imgExtent = {};
@@ -260,9 +299,13 @@ void RenderGraph::AllocateResources(Renderer* renderer)
 			.g = VK_COMPONENT_SWIZZLE_IDENTITY, 
 			.b = VK_COMPONENT_SWIZZLE_IDENTITY, 
 			.a =VK_COMPONENT_SWIZZLE_IDENTITY };
-		viewInfo.subresourceRange;
-
-		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo);
+		viewInfo.subresourceRange.aspectMask = GetAspectMask(img->format);
+		viewInfo.subresourceRange.baseMipLevel = 0;
+		viewInfo.subresourceRange.levelCount = 0;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount = img->layers;
+		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		execGraph.imageResources.push_back(imgRes);
 	}
 
 }

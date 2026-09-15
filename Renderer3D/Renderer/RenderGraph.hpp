@@ -7,6 +7,7 @@
 struct ExecutionGraph
 {
 	std::vector<VkPipeline> pipelines;
+	std::vector<Image> imageResources;
 };
 
 struct ShaderDesc
@@ -44,7 +45,7 @@ public:
 
 	void Compile(Renderer* renderer);
 
-	inline ExecutionGraph* GetExecutionGraph() const { return execGraph; }
+	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 
 	ImageResource* QueryImage(const std::string& name);
 
@@ -93,5 +94,5 @@ private:
 	std::unordered_map<std::string, size_t> shaderBind;
 	std::vector<ImageResource*> swcRelativeImages;
 
-	ExecutionGraph* execGraph;
+	ExecutionGraph execGraph;
 };

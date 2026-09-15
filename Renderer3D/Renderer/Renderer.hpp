@@ -45,7 +45,8 @@ public:
 
 	Image AllocateImage(
 		const VkImageCreateInfo& imgInfo,
-		const VkImageViewCreateInfo& viewInfo);
+		const VkImageViewCreateInfo& viewInfo,
+		VkMemoryPropertyFlagBits memProps);
 
 	inline VkFormat GetSwapchainFormat() const { return VK_FORMAT_R8G8B8A8_UNORM; }
 
@@ -88,6 +89,11 @@ private:
 	void OnResize(HWND hwnd);
 	
 	void CreateSynchPrim();
+
+	VkDeviceMemory AllocateMemory(
+		VkImage image,
+		VkMemoryPropertyFlagBits memProps,
+		const VkMemoryRequirements& memReqs);
 
 private:
 	HWND windowHwnd;

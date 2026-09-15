@@ -220,13 +220,23 @@ void Renderer::CreateSurface(
 
 Image Renderer::AllocateImage(
 	const VkImageCreateInfo& imgInfo,
-	const VkImageViewCreateInfo& viewInfo)
+	const VkImageViewCreateInfo& viewInfo,
+	VkMemoryPropertyFlagBits memProps)
 {
 	Image out = {};
+	VkMemoryRequirements memoryRequirements;
+	VkImageViewCreateInfo info = viewInfo;
+
 	EXIT_ON_VK_ERROR(vkCreateImage(lgDev, &imgInfo, nullptr, &out.img));
+	vkGetImageMemoryRequirements(lgDev, out.img, &memoryRequirements);
+	out.mem = AllocateMemory(out.img, memProps, memoryRequirements);
+	EXIT_ON_VK_ERROR(vkBindImageMemory(lgDev, out.img, out.mem, 0));
+	info.image = out.img;
+	EXIT_ON_VK_ERROR(vkCreateImageView(lgDev, &info, nullptr, &out.imgView));
 
 	return out;
 }
+
 
 VkBool32 Renderer::VbDebugVal(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -517,4 +527,41 @@ void Renderer::CreateSynchPrim()
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 	EXIT_ON_VK_ERROR(vkCreateFence(lgDev, &fenceInfo, nullptr, &gfxQueueFinished));
+}
+
+VkDeviceMemory Renderer::AllocateMemory(
+	VkImage image,
+	VkMemoryPropertyFlagBits memProps,
+	const VkMemoryRequirements& memReqs)
+{
+	VkDeviceMemory memOut;
+	VkPhysicalDeviceMemoryProperties memProperties = {};
+	vkGetPhysicalDeviceMemoryProperties(phDev, &memProperties);
+
+	uint32_t idx;
+	for (idx = 0; idx < memProperties.memoryTypeCount; idx++)
+	{
+		if ((memReqs.memoryTypeBits & (1 << idx) ) == 0)
+		{
+			continue;
+		}
+
+		if ((memProperties.memoryTypes[idx].propertyFlags & memProps) == memProps)
+		{
+			break;
+		}
+	}
+
+	if (memProperties.memoryTypeCount == idx)
+	{
+		MessageBox(NULL, L"Could not find suitable memory heap", NULL, MB_OK);
+		exit(-1);
+	}
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memReqs.size;
+	allocInfo.memoryTypeIndex = idx;
+	EXIT_ON_VK_ERROR(vkAllocateMemory(lgDev, &allocInfo, nullptr, &memOut));
+	return memOut;
 }
