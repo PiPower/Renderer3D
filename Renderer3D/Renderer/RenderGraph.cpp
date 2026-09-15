@@ -251,7 +251,18 @@ PipelineInputDesc RenderGraph::CreatePipelineInput(RenderPass* renderPass)
 PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPass)
 {
 	PipelineRenderingDesc render = {};
+	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
+	{
+		render.outputFormats.push_back(renderPass->outputImages[i]->format);
+	}
+
 	render.info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	render.info.pNext = nullptr;
+	render.info.viewMask = 0;
+	render.info.colorAttachmentCount = (uint32_t)render.outputFormats.size();
+	render.info.pColorAttachmentFormats = render.outputFormats.data();
+	render.info.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+	render.info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 	return render;
 }
 
@@ -301,7 +312,7 @@ void RenderGraph::AllocateResources(Renderer* renderer)
 			.a =VK_COMPONENT_SWIZZLE_IDENTITY };
 		viewInfo.subresourceRange.aspectMask = GetAspectMask(img->format);
 		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 0;
+		viewInfo.subresourceRange.levelCount = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = img->layers;
 		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);

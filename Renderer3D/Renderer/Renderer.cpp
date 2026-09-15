@@ -324,8 +324,13 @@ void Renderer::CreateLogicalDevice()
 	features.samplerAnisotropy = VK_TRUE;
 	features.fillModeNonSolid = VK_TRUE;
 
+	VkPhysicalDeviceDynamicRenderingFeatures dynamicRendering{};
+	dynamicRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+	dynamicRendering.dynamicRendering = VK_TRUE;
+
 	VkDeviceCreateInfo devInfo = {};
 	devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	devInfo.pNext = &dynamicRendering;
 	devInfo.queueCreateInfoCount = infoCount;
 	devInfo.pQueueCreateInfos = queueInfo;
 	devInfo.ppEnabledLayerNames = vaLayers;

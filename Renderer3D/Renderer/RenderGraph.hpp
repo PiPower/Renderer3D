@@ -29,6 +29,7 @@ struct PipelineInputDesc
 struct PipelineRenderingDesc
 {
 	VkPipelineRenderingCreateInfoKHR info;
+	std::vector<VkFormat> outputFormats;
 };
 
 class RenderGraph
