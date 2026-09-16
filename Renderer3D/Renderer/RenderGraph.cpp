@@ -133,14 +133,17 @@ void RenderGraph::Compile(Renderer* renderer)
 	AllocateResources(renderer);
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
-		CompilePipeline(renderer, &renderPasses[i]);
+		RenderingPipeline pipeline = CompilePipeline(renderer, &renderPasses[i]);
 	}
 }
 
-VkPipeline RenderGraph::CompilePipeline(
+RenderingPipeline RenderGraph::CompilePipeline(
 	Renderer* renderer, 
 	RenderPass* renderPass)
 {
+	RenderingPipeline pipelineOut = {};
+	pipelineOut.sets = CreateSets(renderPass);
+
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderer, renderPass);
 	PipelineInputDesc inputDesc = CreatePipelineInput(renderPass);
 	PipelineRenderingDesc renderDesc = CreatePipelineRendering(renderPass);
@@ -165,7 +168,7 @@ VkPipeline RenderGraph::CompilePipeline(
 	pipelineInfo.pDepthStencilState = &renderPass->depthInfo;
 	pipelineInfo.pColorBlendState = &renderPass->colorBlending;
 	pipelineInfo.pDynamicState = &dynamicState;
-	pipelineInfo.layout = nullptr;
+	pipelineInfo.layout = pipelineOut.layout;
 	pipelineInfo.renderPass = VK_NULL_HANDLE;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -179,7 +182,7 @@ VkPipeline RenderGraph::CompilePipeline(
 	}
 
 
-	return pipeline;
+	return pipelineOut;
 }
 
 std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(
@@ -218,23 +221,23 @@ PipelineInputDesc RenderGraph::CreatePipelineInput(RenderPass* renderPass)
 	uint32_t location = 0;
 	for (size_t i = 0; i < renderPass->vertexBuffers.size(); i++)
 	{
-		const BufferResource& res = *renderPass->vertexBuffers[i];
+		const VertexBuffer& vb = renderPass->vertexBuffers[i];
 		inputDesc.bindings.push_back({});
 
 		VkVertexInputBindingDescription* bindingInfo = &inputDesc.bindings.back();
 		bindingInfo->binding = (uint32_t)i;
 		bindingInfo->inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		bindingInfo->stride = (uint32_t)res.size;
+		bindingInfo->stride = vb.stride;
 
-		for (size_t j = 0; j < res.formatOffsets.size(); j++)
+		for (size_t j = 0; j < vb.formatOffsets.size(); j++)
 		{
 			inputDesc.attributes.push_back({});
 
 			VkVertexInputAttributeDescription* attInfo = &inputDesc.attributes.back();
 			attInfo->binding = (uint32_t)i;
 			attInfo->location = location;
-			attInfo->format = res.vertexInputFormats[j];
-			attInfo->offset = res.formatOffsets[j];
+			attInfo->format = vb.vertexInputFormats[j];
+			attInfo->offset = vb.formatOffsets[j];
 			location++;
 		}
 	}
@@ -265,6 +268,29 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 	render.info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 	return render;
 }
+
+std::vector<VkDescriptorSetLayout> RenderGraph::CreateSets(RenderPass* renderPass)
+{
+	std::vector<const BufferResource*> perPassBuffs = {};
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	/*uint32_t bindIdx = 0;
+	for (size_t i = 0; i < renderPass->bufferLevels.size(); i++)
+	{
+		if (renderPass->bufferLevels[i] != BindLevel::PER_PASS)
+		{
+			continue;
+		}
+		VkDescriptorSetLayoutBinding setBind = {};
+		setBind.binding = bindIdx++;
+		setBind.descriptorType = renderPass->isBufferDynamic[i] ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		setBind.descriptorCount = 1;
+
+		bindings.push_back(setBind);
+	}*/
+
+	return std::vector<VkDescriptorSetLayout>();
+}
+
 
 void RenderGraph::AllocateResources(Renderer* renderer)
 {
@@ -364,16 +390,10 @@ ShaderDesc* RenderGraph::QueryShader(const std::string& name)
 	return nullptr;
 }
 
-void RenderGraph::DescribeVertexBuffer(
+void RenderGraph::DescribeBuffer(
 	const std::string& name, 
-	uint32_t stride, 
-	const std::vector<VkFormat>& vertexInputFormats, 
-	const std::vector<uint32_t>& formatOffsets)
+	uint32_t size)
 {
-	if (vertexInputFormats.size() != formatOffsets.size())
-	{
-		throw std::runtime_error("vertexInputFormats != formatOffsets\n");
-	}
 
 	BufferResource* buff = QueryBuffer(name);
 	if (buff->isDefined > 0)
@@ -381,9 +401,7 @@ void RenderGraph::DescribeVertexBuffer(
 		throw std::runtime_error("vertex buffer redefinition\n");
 	}
 	buff->isDefined = 1;
-	buff->size = stride;
-	buff->vertexInputFormats = vertexInputFormats;
-	buff->formatOffsets = formatOffsets;
+	buff->size = size;
 }
 
 void RenderGraph::DescribeImage(

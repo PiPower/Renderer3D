@@ -4,9 +4,16 @@
 #include "RenderPass.hpp"
 #include "Renderer.hpp"
 
+struct RenderingPipeline
+{
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+	std::vector<VkDescriptorSetLayout> sets;
+};
+
 struct ExecutionGraph
 {
-	std::vector<VkPipeline> pipelines;
+	std::vector<RenderingPipeline> pipelines;
 	std::vector<Image> imageResources;
 };
 
@@ -54,11 +61,9 @@ public:
 
 	ShaderDesc* QueryShader(const std::string& name);
 
-	void DescribeVertexBuffer(
+	void DescribeBuffer(
 		const std::string& name,
-		uint32_t stride,
-		const std::vector<VkFormat>& vertexInputFormats,
-		const std::vector<uint32_t>& formatOffsets);
+		uint32_t size);
 
 	void DescribeImage(
 		const std::string& name,
@@ -70,7 +75,7 @@ public:
 		VkImageViewType viewType);
 
 private:
-	VkPipeline CompilePipeline(
+	RenderingPipeline CompilePipeline(
 		Renderer* renderer, 
 		RenderPass* renderPass);
 
@@ -81,6 +86,8 @@ private:
 	PipelineInputDesc CreatePipelineInput(RenderPass* renderPass);
 
 	PipelineRenderingDesc CreatePipelineRendering(RenderPass* renderPass);
+
+	std::vector<VkDescriptorSetLayout> CreateSets(RenderPass* renderPass);
 
 	void AllocateResources(Renderer* renderer);
 private:

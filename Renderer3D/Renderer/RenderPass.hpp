@@ -7,6 +7,20 @@
 #include <array>
 
 
+struct VertexBuffer
+{
+	size_t i;
+	uint32_t stride;
+	std::vector<VkFormat> vertexInputFormats;
+	std::vector<uint32_t> formatOffsets;
+};
+
+struct UniformBuffer
+{
+	size_t i;
+	BindLevel level;
+	uint8_t isDynamic : 1;
+};
 
 class RenderGraph;
 
@@ -29,9 +43,16 @@ public:
 
 	void AddDepthImage(const std::string& name);
 
-	void AddUniformBuffer(const std::string& name);
+	void AddUniformBuffer(
+		const std::string& name, 
+		BindLevel level,
+		bool isBufferDynamic = false);
 
-	void AddVertexBuffer(const std::string& name);
+	void AddVertexBuffer(
+		const std::string& name,
+		uint32_t stride,
+		const std::vector<VkFormat>& vertexInputFormats,
+		const std::vector<uint32_t>& formatOffsets);
 
 	void AddIndexBuffer(const std::string& name);
 
@@ -149,9 +170,10 @@ private:
 	// resource related
 	RenderGraph* rg;
 	bool isGraphicsPass;
-	std::vector<const BufferResource*> vertexBuffers;
+	std::vector<const BufferResource*> usedBuffers;
+	std::vector<VertexBuffer> vertexBuffers;
 	std::vector<const BufferResource*> indexBuffers;
-	std::vector<const BufferResource*> buffers;
+	std::vector<UniformBuffer> uniformBuffers;
 
 	std::vector<const ImageResource*> inputImages;
 	std::vector<const ImageResource*> outputImages;

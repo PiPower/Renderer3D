@@ -19,19 +19,19 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		{"simple_frag", "main", "shaders/simple.frag"},
 	};  
     RenderGraph rg(bufferNames, imageNames, shaderDescs);
-    rg.DescribeVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
-    rg.DescribeVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
-    rg.DescribeVertexBuffer("texcoord", sizeof(Vec3), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
+    rg.DescribeBuffer("vertex", 1000 * sizeof(float));
+    rg.DescribeBuffer("normal", 1000 * sizeof(float));
+    rg.DescribeBuffer("texcoord", 1000 * sizeof(float));
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
-	rpSimple->AddVertexBuffer("vertex");
-    rpSimple->AddVertexBuffer("normal");
-    rpSimple->AddVertexBuffer("texcoord");
+	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rpSimple->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rpSimple->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
     rpSimple->AddIndexBuffer("index");
 
-    rpSimple->AddUniformBuffer("camera");
-    rpSimple->AddUniformBuffer("object_transform");
+    rpSimple->AddUniformBuffer("camera", BindLevel::PER_PASS);
+    rpSimple->AddUniformBuffer("object_transform", BindLevel::PER_OBJECT);
 
 	rpSimple->AddColorAttachment("output");
 

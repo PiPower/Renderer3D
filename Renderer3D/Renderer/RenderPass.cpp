@@ -86,7 +86,10 @@ void RenderPass::AddDepthImage(const std::string& name)
 	depthInfo.depthTestEnable = VK_TRUE;
 }
 
-void RenderPass::AddUniformBuffer(const std::string& name)
+void RenderPass::AddUniformBuffer(
+	const std::string& name,
+	BindLevel level,
+	bool isBufferDynamic)
 {
 	BufferResource* buf = rg->QueryBuffer(name);
 	if (buf == nullptr)
@@ -95,11 +98,21 @@ void RenderPass::AddUniformBuffer(const std::string& name)
 	}
 
 	buf->usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-	buffers.push_back(buf);
+	usedBuffers.push_back(buf);
+	uniformBuffers.emplace_back(usedBuffers.size()-1, level, isBufferDynamic);
 }
 
-void RenderPass::AddVertexBuffer(const std::string& name)
+void RenderPass::AddVertexBuffer(
+	const std::string& name,
+	uint32_t stride,
+	const std::vector<VkFormat>& vertexInputFormats,
+	const std::vector<uint32_t>& formatOffsets)
 {
+	if (vertexInputFormats.size() != formatOffsets.size())
+	{
+		throw std::runtime_error("vertexInputFormats != formatOffsets\n");
+	}
+
 	BufferResource* buf = rg->QueryBuffer(name);
 	if (buf == nullptr)
 	{
@@ -107,7 +120,8 @@ void RenderPass::AddVertexBuffer(const std::string& name)
 	}
 
 	buf->usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	vertexBuffers.push_back(buf);
+	usedBuffers.push_back(buf);
+	vertexBuffers.emplace_back(usedBuffers.size() - 1, stride, vertexInputFormats, formatOffsets);
 }
 
 void RenderPass::AddIndexBuffer(const std::string& name)
