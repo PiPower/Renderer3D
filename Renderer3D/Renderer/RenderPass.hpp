@@ -15,13 +15,29 @@ struct VertexBuffer
 	std::vector<uint32_t> formatOffsets;
 };
 
+struct IndexBuffer
+{
+	size_t i;
+	VkFormat format;
+};
+
 struct UniformBuffer
 {
 	size_t i;
 	BindLevel level;
+	VkShaderStageFlags stages;
 	uint8_t isDynamic : 1;
 };
 
+struct BufferClass
+{
+	size_t offset;
+	uint8_t isUniformBuffer : 1;
+	uint8_t isVertexBuffer : 1;
+	uint8_t isIndexBuffer : 1;
+
+
+};
 class RenderGraph;
 
 class RenderPass
@@ -59,6 +75,10 @@ public:
 	void AddVertexShader(const std::string& name);
 
 	void AddFragmentShader(const std::string& name);
+
+	void BindResourceToShader(
+		const std::string& shaderName,
+		const std::vector<std::string>& buffers);
 
 //  rendering pipeline settings
 	inline RenderPass& SetTopology(VkPrimitiveTopology topology) { asmInfo.topology = topology; return *this; }
@@ -172,8 +192,9 @@ private:
 	bool isGraphicsPass;
 	std::vector<const BufferResource*> usedBuffers;
 	std::vector<VertexBuffer> vertexBuffers;
-	std::vector<const BufferResource*> indexBuffers;
+	std::vector<IndexBuffer> indexBuffers;
 	std::vector<UniformBuffer> uniformBuffers;
+	std::unordered_map<std::string, BufferClass> bufferBindings;
 
 	std::vector<const ImageResource*> inputImages;
 	std::vector<const ImageResource*> outputImages;

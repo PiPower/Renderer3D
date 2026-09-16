@@ -31,7 +31,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddIndexBuffer("index");
 
     rpSimple->AddUniformBuffer("camera", BindLevel::PER_PASS);
-    rpSimple->AddUniformBuffer("object_transform", BindLevel::PER_OBJECT);
+    rpSimple->AddUniformBuffer("object_transform", BindLevel::PER_OBJECT, true);
 
 	rpSimple->AddColorAttachment("output");
 

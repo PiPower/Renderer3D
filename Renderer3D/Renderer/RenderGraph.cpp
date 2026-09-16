@@ -76,7 +76,7 @@ RenderGraph::RenderGraph(
 	const std::vector<std::string>& imageNames,
 	const std::vector<ShaderDesc>& shaderDescs)
 	:
-	execGraph({})
+	renderer(nullptr), execGraph({})
 {
 
 	for (size_t i = 0; i < bufferNames.size(); ++i)
@@ -128,23 +128,26 @@ RenderPass* RenderGraph::CreateRenderPass(
 	return &renderPasses.back();
 }
 
-void RenderGraph::Compile(Renderer* renderer)
+void RenderGraph::Compile(Renderer* rendererInst)
 {
-	AllocateResources(renderer);
+	if (renderer)
+	{
+		throw std::runtime_error("Renderer is already bound\n");
+	}
+	renderer = rendererInst;
+	AllocateResources();
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
-		RenderingPipeline pipeline = CompilePipeline(renderer, &renderPasses[i]);
+		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
 	}
 }
 
-RenderingPipeline RenderGraph::CompilePipeline(
-	Renderer* renderer, 
-	RenderPass* renderPass)
+RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 {
 	RenderingPipeline pipelineOut = {};
 	pipelineOut.sets = CreateSets(renderPass);
 
-	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderer, renderPass);
+	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderPass);
 	PipelineInputDesc inputDesc = CreatePipelineInput(renderPass);
 	PipelineRenderingDesc renderDesc = CreatePipelineRendering(renderPass);
 
@@ -185,9 +188,7 @@ RenderingPipeline RenderGraph::CompilePipeline(
 	return pipelineOut;
 }
 
-std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(
-	Renderer* renderer,
-	RenderPass* renderPass)
+std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(RenderPass* renderPass)
 {
 	ShaderCompiler compiler;
 	std::vector<VkPipelineShaderStageCreateInfo> shaderInfo;
@@ -271,28 +272,55 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 
 std::vector<VkDescriptorSetLayout> RenderGraph::CreateSets(RenderPass* renderPass)
 {
-	std::vector<const BufferResource*> perPassBuffs = {};
-	std::vector<VkDescriptorSetLayoutBinding> bindings;
-	/*uint32_t bindIdx = 0;
-	for (size_t i = 0; i < renderPass->bufferLevels.size(); i++)
+	std::vector<VkDescriptorSetLayout> setLayouts;
+
+	for (uint32_t i = 1; i <= static_cast<uint32_t>(BindLevel::PER_OBJECT); i++)
 	{
-		if (renderPass->bufferLevels[i] != BindLevel::PER_PASS)
+		std::vector<VkDescriptorSetLayoutBinding> bindings = 
+				CreateBufferBindings(renderPass->uniformBuffers, static_cast<BindLevel>(i));
+
+		if (bindings.size() == 0)
+		{
+			setLayouts.push_back(VK_NULL_HANDLE);
+			continue;
+		}
+
+		VkDescriptorSetLayoutCreateInfo setInfo = {};
+		setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setInfo.bindingCount = (uint32_t)bindings.size();
+		setInfo.pBindings = bindings.data();
+		setLayouts.push_back(renderer->CreateDescriptorSet(&setInfo));
+	}
+	return setLayouts;
+}
+
+std::vector<VkDescriptorSetLayoutBinding> RenderGraph::CreateBufferBindings(
+	const std::vector<UniformBuffer>& uniformBuffers,
+	BindLevel level)
+{
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	uint32_t bindIdx = 0;
+	for (size_t i = 0; i < uniformBuffers.size(); i++)
+	{
+		const UniformBuffer& uniformBuffer = uniformBuffers[i];
+		if (uniformBuffer.level != level)
 		{
 			continue;
 		}
 		VkDescriptorSetLayoutBinding setBind = {};
 		setBind.binding = bindIdx++;
-		setBind.descriptorType = renderPass->isBufferDynamic[i] ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		setBind.descriptorType = uniformBuffer.isDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		setBind.descriptorCount = 1;
+		setBind.stageFlags = uniformBuffer.stages;
 
 		bindings.push_back(setBind);
-	}*/
+	}
 
-	return std::vector<VkDescriptorSetLayout>();
+	return bindings;
 }
 
 
-void RenderGraph::AllocateResources(Renderer* renderer)
+void RenderGraph::AllocateResources()
 {
 	VkSurfaceCapabilitiesKHR capabilities = renderer->GetSwapchainCapabilities();
 	for (size_t i = 0; i < imgResource.size(); i++)

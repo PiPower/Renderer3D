@@ -237,6 +237,14 @@ Image Renderer::AllocateImage(
 	return out;
 }
 
+VkDescriptorSetLayout Renderer::CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info)
+{
+	VkDescriptorSetLayout setLayout;
+	EXIT_ON_VK_ERROR(vkCreateDescriptorSetLayout(lgDev, info, nullptr, &setLayout));
+	return setLayout;
+}
+
+
 
 VkBool32 Renderer::VbDebugVal(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

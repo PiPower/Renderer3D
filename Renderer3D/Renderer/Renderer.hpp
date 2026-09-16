@@ -48,6 +48,8 @@ public:
 		const VkImageViewCreateInfo& viewInfo,
 		VkMemoryPropertyFlagBits memProps);
 
+	VkDescriptorSetLayout CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info);
+
 	inline VkFormat GetSwapchainFormat() const { return VK_FORMAT_R8G8B8A8_UNORM; }
 
 	inline VkDevice GetDevice() { return lgDev; }

@@ -51,7 +51,7 @@ public:
 		const std::string& name,
 		bool isGraphicsPass);
 
-	void Compile(Renderer* renderer);
+	void Compile(Renderer* rendererInst);
 
 	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 
@@ -75,13 +75,9 @@ public:
 		VkImageViewType viewType);
 
 private:
-	RenderingPipeline CompilePipeline(
-		Renderer* renderer, 
-		RenderPass* renderPass);
+	RenderingPipeline CompilePipeline(RenderPass* renderPass);
 
-	std::vector<VkPipelineShaderStageCreateInfo> CompileShaders(
-		Renderer* renderer,
-		RenderPass* renderPass);
+	std::vector<VkPipelineShaderStageCreateInfo> CompileShaders(RenderPass* renderPass);
 
 	PipelineInputDesc CreatePipelineInput(RenderPass* renderPass);
 
@@ -89,7 +85,11 @@ private:
 
 	std::vector<VkDescriptorSetLayout> CreateSets(RenderPass* renderPass);
 
-	void AllocateResources(Renderer* renderer);
+	std::vector<VkDescriptorSetLayoutBinding> CreateBufferBindings(
+		const std::vector<UniformBuffer>& uniformBuffers,
+		BindLevel level);
+
+	void AllocateResources();
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource> imgResource;
@@ -102,5 +102,6 @@ private:
 	std::unordered_map<std::string, size_t> shaderBind;
 	std::vector<ImageResource*> swcRelativeImages;
 
+	Renderer* renderer;
 	ExecutionGraph execGraph;
 };

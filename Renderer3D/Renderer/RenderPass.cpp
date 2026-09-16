@@ -97,9 +97,16 @@ void RenderPass::AddUniformBuffer(
 		throw std::runtime_error("Buffer with name '" + name + "' does not exist.");
 	}
 
+	auto bufferBind = bufferBindings.find(name);
+	if (bufferBind != bufferBindings.end())
+	{
+		throw std::runtime_error("Buffer with name '" + bufferBind->first + "' is already bound to pipeline.");
+	}
+
 	buf->usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	usedBuffers.push_back(buf);
-	uniformBuffers.emplace_back(usedBuffers.size()-1, level, isBufferDynamic);
+	uniformBuffers.emplace_back(usedBuffers.size()-1, level, VK_SHADER_STAGE_ALL, isBufferDynamic);
+	bufferBindings[name] = { uniformBuffers.size() - 1, 1, 0, 0 };
 }
 
 void RenderPass::AddVertexBuffer(
@@ -119,9 +126,16 @@ void RenderPass::AddVertexBuffer(
 		throw std::runtime_error("Buffer with name '" + name + "' does not exist.");
 	}
 
+	auto bufferBind = bufferBindings.find(name);
+	if (bufferBind != bufferBindings.end())
+	{
+		throw std::runtime_error("Buffer with name '" + bufferBind->first + "' is already bound to pipeline.");
+	}
+
 	buf->usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	usedBuffers.push_back(buf);
 	vertexBuffers.emplace_back(usedBuffers.size() - 1, stride, vertexInputFormats, formatOffsets);
+	bufferBindings[name] = { uniformBuffers.size() - 1, 0, 1, 0 };
 }
 
 void RenderPass::AddIndexBuffer(const std::string& name)
@@ -131,9 +145,17 @@ void RenderPass::AddIndexBuffer(const std::string& name)
 	{
 		throw std::runtime_error("Buffer with name '" + name + "' does not exist.");
 	}
+
+	auto bufferBind = bufferBindings.find(name);
+	if (bufferBind != bufferBindings.end())
+	{
+		throw std::runtime_error("Buffer with name '" + bufferBind->first + "' is already bound to pipeline.");
+	}
 	
 	buf->usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	indexBuffers.push_back(buf);
+	usedBuffers.push_back(buf);
+	indexBuffers.emplace_back(usedBuffers.size() - 1, VK_FORMAT_UNDEFINED);
+	bufferBindings[name] = { uniformBuffers.size() - 1, 0, 0, 1 };
 }
 
 void RenderPass::AddVertexShader(const std::string& name)
