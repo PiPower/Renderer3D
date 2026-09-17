@@ -50,6 +50,8 @@ public:
 
 	VkDescriptorSetLayout CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info);
 
+	VkPipelineLayout CreatePipelineLayout(const std::vector< VkDescriptorSetLayout>& sets);
+
 	inline VkFormat GetSwapchainFormat() const { return VK_FORMAT_R8G8B8A8_UNORM; }
 
 	inline VkDevice GetDevice() { return lgDev; }

@@ -2,7 +2,7 @@
 #ifndef TEXTURE_COUNT
     #define TEXTURE_COUNT 1
 #endif
-
+/*
 layout(binding = 0) uniform GlobalUbo
 {
     mat4 view;
@@ -31,10 +31,10 @@ layout(location = 1) in vec2 texCoord;
 layout(location = 2) in vec4 worldPos;
 
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 outColor;*/
 void main()
 {
-
+ /*
     vec3 norm = normalize(faceNormal);
     vec3 lightDir = normalize(globalUbo.lightPos.xyz - worldPos.xyz);
     float diff = max(dot(norm, lightDir), 0.0);
@@ -50,6 +50,6 @@ void main()
 
     float gamma = 2.2;
     outColor = texCol;
-    outColor.rgb = pow(outColor.rgb, vec3(1.0/gamma));
+    outColor.rgb = pow(outColor.rgb, vec3(1.0/gamma)); */
 
 }

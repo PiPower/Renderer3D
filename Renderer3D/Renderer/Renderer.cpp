@@ -244,6 +244,18 @@ VkDescriptorSetLayout Renderer::CreateDescriptorSet(const VkDescriptorSetLayoutC
 	return setLayout;
 }
 
+VkPipelineLayout Renderer::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& sets)
+{
+	VkPipelineLayout layout;
+	VkPipelineLayoutCreateInfo layoutInfo = {};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	layoutInfo.setLayoutCount = (uint32_t)sets.size();
+	layoutInfo.pSetLayouts = sets.data();
+	EXIT_ON_VK_ERROR(vkCreatePipelineLayout(lgDev, &layoutInfo, nullptr, &layout));
+	
+	return layout;
+}
+
 
 
 VkBool32 Renderer::VbDebugVal(

@@ -146,6 +146,7 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 {
 	RenderingPipeline pipelineOut = {};
 	pipelineOut.sets = CreateSets(renderPass);
+	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.sets);
 
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderPass);
 	PipelineInputDesc inputDesc = CreatePipelineInput(renderPass);
@@ -177,8 +178,7 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = 0;
 
-	VkPipeline pipeline;
-	VkResult res = vkCreateGraphicsPipelines(renderer->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+	VkResult res = vkCreateGraphicsPipelines(renderer->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineOut.pipeline);
 	if (res != VK_SUCCESS)
 	{
 		throw std::runtime_error("Pipeline creation failed\n");
@@ -278,12 +278,6 @@ std::vector<VkDescriptorSetLayout> RenderGraph::CreateSets(RenderPass* renderPas
 	{
 		std::vector<VkDescriptorSetLayoutBinding> bindings = 
 				CreateBufferBindings(renderPass->uniformBuffers, static_cast<BindLevel>(i));
-
-		if (bindings.size() == 0)
-		{
-			setLayouts.push_back(VK_NULL_HANDLE);
-			continue;
-		}
 
 		VkDescriptorSetLayoutCreateInfo setInfo = {};
 		setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
