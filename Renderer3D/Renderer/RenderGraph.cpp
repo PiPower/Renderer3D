@@ -136,9 +136,11 @@ void RenderGraph::Compile(Renderer* rendererInst)
 	}
 	renderer = rendererInst;
 	AllocateResources();
+
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
 		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
+		execGraph.pipelines.push_back(pipeline);
 	}
 }
 

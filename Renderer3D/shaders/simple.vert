@@ -17,30 +17,37 @@ layout(set = 0, binding = 0) uniform Globals
     Light lights[LIGHT_COUNT]; // (R, G, B, Intensity);
     mat4 lightViewProj[LIGHT_COUNT];
 } global;
+*/
 
-layout(set = 0, binding = 1) uniform  ObjectTransform
+layout(set = 0, binding = 0) uniform  Camera
 {
-    mat4 model;
-} objectTransform;*/
+    mat4 proj;
+    mat4 view;
+} camera;
+
+layout(set = 2, binding = 0) uniform  ObjTransform
+{
+    mat4 transform;
+} objTransform;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTex;
 
-/*
+
 layout(location = 0) out vec3 faceNormal;
 layout(location = 1) out vec2 texCoord;
 layout(location = 2) out vec4 worldPos;
 layout(location = 3) out vec4 worldPosLightCoord;
-*/
+
 void main() 
 {
-/*
-    worldPos = objectTransform.model * vec4(inPosition, 1.0);
-    worldPosLightCoord = global.lightViewProj[0] * worldPos;
-    faceNormal =  transpose(inverse(mat3(objectTransform.model))) * inNormal;
-    texCoord = inTex;
 
-    gl_Position = global.proj * global.view * worldPos;
-    */
+    worldPos = objTransform.transform * vec4(inPosition, 1.0);
+    worldPosLightCoord = vec4(0.5, 0.7, 0.5, 1.0);
+    //faceNormal =  transpose(inverse(mat3(objectTransform.model))) * inNormal;
+    //texCoord = inTex;
+
+    gl_Position = camera.proj * camera.view * worldPos;
+    
 }

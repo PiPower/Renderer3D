@@ -191,6 +191,12 @@ void RenderPass::AddFragmentShader(const std::string& name)
 	shader->stages = (VkShaderStageFlagBits)(shader->stages | VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
+void RenderPass::BindResourceToShader(
+	const std::string& shaderName, 
+	const std::vector<std::string>& buffers)
+{
+}
+
 void RenderPass::SetBlendEnable(size_t attachmentIdx, VkBool32 enable)
 {
 	if (blendAttachmets.size() <= attachmentIdx)

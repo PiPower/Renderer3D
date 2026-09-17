@@ -24,14 +24,14 @@ layout( push_constant ) uniform constants
 {
     ivec4 index;
 } PushConstants;
-
+*/
 
 layout(location = 0) in vec3 faceNormal;
 layout(location = 1) in vec2 texCoord; 
 layout(location = 2) in vec4 worldPos;
+layout(location = 3) in vec4 worldPosLightCoord;
 
-
-layout(location = 0) out vec4 outColor;*/
+layout(location = 0) out vec4 outColor;
 void main()
 {
  /*
