@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
+#include "Renderer.hpp"
 #include <unordered_map>
 #include "Resource.hpp"
 #include <array>

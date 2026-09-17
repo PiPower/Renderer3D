@@ -4,6 +4,7 @@
 #include "Renderer/Scene.hpp"
 using namespace std;
 
+void RenderStep(const RenderResources& args, VkCommandBuffer cmdBuff);
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
@@ -37,7 +38,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	rpSimple->AddVertexShader("simple_vert");
 	rpSimple->AddFragmentShader("simple_frag");
-
+    rpSimple->SetRenderFunction(RenderStep);
     //RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
 	//rpSimple->AddTextureImage("skybox");
     //rpSimple->AddOutputImage("output");
@@ -59,3 +60,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 }
 
+void RenderStep(const RenderResources& args, VkCommandBuffer cmdBuff)
+{
+}

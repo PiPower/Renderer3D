@@ -33,17 +33,3 @@ struct ImageResource
 	VkImageLayout inStageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageUsageFlags aux_usage = 0;
 };
-
-struct Image
-{
-	VkDeviceMemory mem;
-	VkImage img;
-	VkImageView imgView;
-};
-
-struct Buffer
-{
-	VkDeviceMemory mem;
-	VkBuffer img;
-	VkBufferView imgView;
-};

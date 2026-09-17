@@ -23,6 +23,21 @@ struct Swapchain
 	std::vector<VkImageView> views;
 };
 
+
+struct Image
+{
+	VkDeviceMemory mem;
+	VkImage img;
+	VkImageView imgView;
+};
+
+struct Buffer
+{
+	VkDeviceMemory mem;
+	VkBuffer img;
+	VkBufferView imgView;
+};
+
 class Renderer
 {
 public:
