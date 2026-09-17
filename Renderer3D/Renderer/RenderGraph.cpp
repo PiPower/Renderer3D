@@ -365,11 +365,27 @@ void RenderGraph::AllocateResources()
 		viewInfo.subresourceRange.levelCount = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = img->layers;
-		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		execGraph.imageResources.push_back(imgRes);
 	}
 
+	for (size_t i = 0; i < buffResource.size(); i++)
+	{
+		const BufferResource* buff = &buffResource[i];
+		VkBufferCreateInfo buffInfo = {};
+		buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		buffInfo.pNext = nullptr;
+		buffInfo.flags = 0;
+		buffInfo.size = buff->size;
+		buffInfo.usage = buff->usage;
+		buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		buffInfo.queueFamilyIndexCount = 0;
+		buffInfo.pQueueFamilyIndices = nullptr;
+
+		Buffer buffRes = renderer->AllocateBuffer(buffInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		execGraph.bufferResources.push_back(buffRes);
+	}
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)

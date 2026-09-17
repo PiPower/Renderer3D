@@ -23,13 +23,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("vertex", 1000 * sizeof(float));
     rg.DescribeBuffer("normal", 1000 * sizeof(float));
     rg.DescribeBuffer("texcoord", 1000 * sizeof(float));
+    rg.DescribeBuffer("index", 1000 * sizeof(uint32_t));
+    rg.DescribeBuffer("camera", 16 * 2 * sizeof(float));
+    rg.DescribeBuffer("object_transform", 16 * 2 * sizeof(float));
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
     rpSimple->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
     rpSimple->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
-    rpSimple->AddIndexBuffer("index");
+    rpSimple->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
 
     rpSimple->AddUniformBuffer("camera", BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", BindLevel::PER_OBJECT, true);

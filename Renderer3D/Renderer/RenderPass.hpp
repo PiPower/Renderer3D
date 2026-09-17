@@ -19,7 +19,7 @@ struct VertexBuffer
 struct IndexBuffer
 {
 	size_t i;
-	VkFormat format;
+	VkIndexType dType;
 };
 
 struct UniformBuffer
@@ -91,7 +91,9 @@ public:
 		const std::vector<VkFormat>& vertexInputFormats,
 		const std::vector<uint32_t>& formatOffsets);
 
-	void AddIndexBuffer(const std::string& name);
+	void AddIndexBuffer(
+		const std::string& name,
+		VkIndexType indexType);
 
 	void AddVertexShader(const std::string& name);
 

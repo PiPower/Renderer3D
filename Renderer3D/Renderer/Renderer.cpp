@@ -229,10 +229,25 @@ Image Renderer::AllocateImage(
 
 	EXIT_ON_VK_ERROR(vkCreateImage(lgDev, &imgInfo, nullptr, &out.img));
 	vkGetImageMemoryRequirements(lgDev, out.img, &memoryRequirements);
-	out.mem = AllocateMemory(out.img, memProps, memoryRequirements);
+	out.mem = AllocateMemory(memProps, memoryRequirements);
 	EXIT_ON_VK_ERROR(vkBindImageMemory(lgDev, out.img, out.mem, 0));
 	info.image = out.img;
 	EXIT_ON_VK_ERROR(vkCreateImageView(lgDev, &info, nullptr, &out.imgView));
+
+	return out;
+}
+
+Buffer Renderer::AllocateBuffer(
+	const VkBufferCreateInfo& buffInfo,
+	VkMemoryPropertyFlagBits memProps)
+{
+	Buffer out = {};
+	VkMemoryRequirements memoryRequirements = {};
+
+	EXIT_ON_VK_ERROR(vkCreateBuffer(lgDev, &buffInfo, nullptr, &out.buff));
+	vkGetBufferMemoryRequirements(lgDev, out.buff, &memoryRequirements);
+	out.mem = AllocateMemory(memProps, memoryRequirements);
+	EXIT_ON_VK_ERROR(vkBindBufferMemory(lgDev, out.buff, out.mem, 0));
 
 	return out;
 }
@@ -555,7 +570,6 @@ void Renderer::CreateSynchPrim()
 }
 
 VkDeviceMemory Renderer::AllocateMemory(
-	VkImage image,
 	VkMemoryPropertyFlagBits memProps,
 	const VkMemoryRequirements& memReqs)
 {

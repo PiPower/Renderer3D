@@ -34,8 +34,7 @@ struct Image
 struct Buffer
 {
 	VkDeviceMemory mem;
-	VkBuffer img;
-	VkBufferView imgView;
+	VkBuffer buff;
 };
 
 class Renderer
@@ -54,6 +53,10 @@ public:
 	Image AllocateImage(
 		const VkImageCreateInfo& imgInfo,
 		const VkImageViewCreateInfo& viewInfo,
+		VkMemoryPropertyFlagBits memProps);
+
+	Buffer AllocateBuffer(
+		const VkBufferCreateInfo& buffInfo,
 		VkMemoryPropertyFlagBits memProps);
 
 	VkDescriptorSetLayout CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info);
@@ -103,7 +106,6 @@ private:
 	void CreateSynchPrim();
 
 	VkDeviceMemory AllocateMemory(
-		VkImage image,
 		VkMemoryPropertyFlagBits memProps,
 		const VkMemoryRequirements& memReqs);
 

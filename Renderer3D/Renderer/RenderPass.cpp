@@ -138,7 +138,9 @@ void RenderPass::AddVertexBuffer(
 	bufferBindings[name] = { uniformBuffers.size() - 1, 0, 1, 0 };
 }
 
-void RenderPass::AddIndexBuffer(const std::string& name)
+void RenderPass::AddIndexBuffer(
+	const std::string& name,
+	VkIndexType indexType)
 {
 	BufferResource* buf = rg->QueryBuffer(name);
 	if (buf == nullptr)
@@ -154,7 +156,7 @@ void RenderPass::AddIndexBuffer(const std::string& name)
 	
 	buf->usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	usedBuffers.push_back(buf);
-	indexBuffers.emplace_back(usedBuffers.size() - 1, VK_FORMAT_UNDEFINED);
+	indexBuffers.emplace_back(usedBuffers.size() - 1, indexType);
 	bufferBindings[name] = { uniformBuffers.size() - 1, 0, 0, 1 };
 }
 
