@@ -15,6 +15,10 @@ struct ExecutionGraph
 {
 	std::vector<RenderingPipeline> pipelines;
 	std::vector<Image> imageResources;
+	std::vector<Buffer> bufferResources;
+
+	// resources are copies of all above handles, they are to be fed to their render steps
+	std::vector<RenderResources> renderResources;
 };
 
 struct ShaderDesc

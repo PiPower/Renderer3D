@@ -366,6 +366,7 @@ void RenderGraph::AllocateResources()
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = img->layers;
 		Image imgRes = renderer->AllocateImage(imgInfo, viewInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
 		execGraph.imageResources.push_back(imgRes);
 	}
 

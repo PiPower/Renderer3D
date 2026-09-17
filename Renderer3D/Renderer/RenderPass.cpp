@@ -4,7 +4,7 @@
 
 RenderPass::RenderPass(RenderGraph* rg, bool isGraphicsPass)
 	: 
-	rg(rg), isGraphicsPass(isGraphicsPass)
+	rg(rg), isGraphicsPass(isGraphicsPass), renderFn(nullptr)
 {
 	asmInfo = {};
 	asmInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

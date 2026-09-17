@@ -35,9 +35,29 @@ struct BufferClass
 	uint8_t isUniformBuffer : 1;
 	uint8_t isVertexBuffer : 1;
 	uint8_t isIndexBuffer : 1;
-
-
 };
+
+struct ImageClass
+{
+	size_t offset;
+	uint8_t isInput : 1;
+	uint8_t isOutput : 1;
+	uint8_t isTexture : 1;
+};
+
+struct RenderResources
+{
+	const std::vector<const Buffer&>& vertexBuffers;
+	const std::vector<const Buffer&>& indexBuffers;
+	const std::vector<const Buffer&>& uniformBuffers;
+
+	const std::vector<const Image&>& inputAttachments;
+	const std::vector<const Image&>& outputAttachments;
+	const std::vector<const Image&>& textures;
+};
+
+typedef void (*RenderFunction)(const RenderResources& args, VkCommandBuffer cmdBuff);
+
 class RenderGraph;
 
 class RenderPass
@@ -80,6 +100,7 @@ public:
 		const std::string& shaderName,
 		const std::vector<std::string>& buffers);
 
+	inline void SetRenderFunction(RenderFunction rn) { renderFn = rn; }
 //  rendering pipeline settings
 	inline RenderPass& SetTopology(VkPrimitiveTopology topology) { asmInfo.topology = topology; return *this; }
 
@@ -188,6 +209,7 @@ public:
 
 private:
 	// resource related
+	RenderFunction renderFn;
 	RenderGraph* rg;
 	bool isGraphicsPass;
 	std::vector<const BufferResource*> usedBuffers;
@@ -199,6 +221,7 @@ private:
 	std::vector<const ImageResource*> inputImages;
 	std::vector<const ImageResource*> outputImages;
 	std::vector<const ImageResource*> textureImages;
+	std::unordered_map<std::string, ImageClass> imageBindings;
 
 	std::array<std::string, 2> shaderStages;
 
