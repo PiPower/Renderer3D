@@ -3,6 +3,12 @@
 #include <stdexcept>
 #include "ShaderCompiler.hpp"
 
+#define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
+#define EXIT_ON_VK_ERROR(expr){VkResult __result__ = (expr); if(__result__ != VK_SUCCESS){\
+	MessageBox(NULL, L"vkResult is error\nLINE: " STRINGIFY(__LINE__) "\nFILE: " STRINGIFY(__FILE__), NULL, MB_OK); exit(-1); }}
+
+
 template<typename BufferType>
 static void FilterBuffers(
 	const std::vector<BufferType>& searchedBuffers,
@@ -120,9 +126,11 @@ void RenderGraph::Compile(Renderer* rendererInst)
 	{
 		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
 		RenderResources passResources = CreateRenderResources(&renderPasses[i]);
+		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources);
 
-		execGraph.pipelines.push_back(pipeline);
+		execGraph.pipelines.push_back(std::move(pipeline));
 		execGraph.renderResources.push_back(passResources);
+		execGraph.renderInfo.push_back(std::move(renderInfo));
 	}
 
 	execGraph.gfxCmdPool = renderer->CreateGraphicsCommandPool();
@@ -401,20 +409,70 @@ void RenderGraph::AllocateResources()
 	}
 }
 
+RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& resources)
+{
+	renderer->GetSwapchainCapabilities().currentExtent;
+	RenderInfoStruct info = {};
+	info.outputAttachments.resize(resources.colorImages.size());
+
+	info.renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	info.renderingInfo.renderArea = {
+		{0 ,0},
+		renderer->GetSwapchainCapabilities().currentExtent };
+	info.renderingInfo.layerCount = 1;
+	info.renderingInfo.viewMask = 0;
+	info.renderingInfo.colorAttachmentCount = (uint32_t)resources.colorImages.size();
+	info.renderingInfo.pColorAttachments = info.outputAttachments.data();
+	info.renderingInfo.pDepthAttachment = nullptr;
+	info.renderingInfo.pStencilAttachment = nullptr;
+
+	for (size_t i = 0; i < info.outputAttachments.size(); i++)
+	{
+		VkRenderingAttachmentInfo* attachmentInfo = &info.outputAttachments[i];
+		attachmentInfo->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		attachmentInfo->imageView = resources.colorImages[i]->imgView;
+		attachmentInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachmentInfo->resolveMode = VK_RESOLVE_MODE_NONE;
+		attachmentInfo->resolveImageView = VK_NULL_HANDLE ;
+		attachmentInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentInfo->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachmentInfo->clearValue.color = { 0, 0, 0, 1.0f };
+		attachmentInfo->clearValue.depthStencil = { 1.0f, 0 };
+	}
+
+	return info;
+}
+
 void RenderGraph::Render()
 {
 	for (size_t i = 0; i < execGraph.pipelines.size(); i++)
 	{
-		RunPipeline(execGraph.pipelines[i], execGraph.renderResources[i]);
+		VkCommandBufferBeginInfo cmdInfo = { };
+		cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		EXIT_ON_VK_ERROR(vkResetCommandBuffer(execGraph.gfxCmdBuffers[i], 0));
+		EXIT_ON_VK_ERROR(vkBeginCommandBuffer(execGraph.gfxCmdBuffers[i], &cmdInfo));
+		RunPipeline(
+			execGraph.pipelines[i],
+			execGraph.renderResources[i],
+			&execGraph.renderInfo[i],
+			execGraph.gfxCmdBuffers[i]);
+
 	}
 }
 
 void RenderGraph::RunPipeline(
 	const RenderingPipeline& renderPipeline,
-	const RenderResources& resources)
+	const RenderResources& resources,
+	RenderInfoStruct* renderInfo,
+	VkCommandBuffer cmdBuffer)
 {
+	vkCmdBeginRendering(cmdBuffer, &renderInfo->renderingInfo);
 
 
+	vkCmdEndRendering(cmdBuffer);
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)

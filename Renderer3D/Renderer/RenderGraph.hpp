@@ -11,12 +11,18 @@ struct RenderingPipeline
 	std::vector<VkDescriptorSetLayout> sets;
 };
 
+struct RenderInfoStruct
+{
+	VkRenderingInfo renderingInfo;
+	std::vector<VkRenderingAttachmentInfo> outputAttachments;
+};
+
 struct ExecutionGraph
 {
 	std::vector<RenderingPipeline> pipelines;
 	std::vector<Image> imageResources;
 	std::vector<Buffer> bufferResources;
-
+	std::vector<RenderInfoStruct> renderInfo;
 	// resources are copies of all above handles, they are to be fed to their render steps
 	std::vector<RenderResources> renderResources;
 	VkCommandPool gfxCmdPool;
@@ -107,9 +113,13 @@ private:
 
 	void AllocateResources();
 
+	RenderInfoStruct CreateRenderInfoForPass(const RenderResources& resources);
+
 	void RunPipeline(
 		const RenderingPipeline& renderPipeline,
-		const RenderResources& resources);
+		const RenderResources& resources,
+		RenderInfoStruct* renderInfo,
+		VkCommandBuffer cmdBuffer);
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource*> imgResource;
