@@ -13,20 +13,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	Renderer renderer(hInstance, wnd.GetWindowHWND());
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
     
-    std::vector<std::string> bufferNames = { "vertex", "normal" , "texcoord", "index", "camera", "object_transform" };
-    std::vector<std::string> imageNames = {"output", "skybox"};
-	std::vector<ShaderDesc> shaderDescs = {
-		{"simple_vert", "main", "shaders/simple.vert"},
-		{"simple_frag", "main", "shaders/simple.frag"},
-	};  
-    RenderGraph rg(bufferNames, imageNames, shaderDescs);
+    RenderGraph rg;
     rg.DescribeBuffer("vertex", 1000 * sizeof(float));
     rg.DescribeBuffer("normal", 1000 * sizeof(float));
     rg.DescribeBuffer("texcoord", 1000 * sizeof(float));
     rg.DescribeBuffer("index", 1000 * sizeof(uint32_t));
     rg.DescribeBuffer("camera", 16 * 2 * sizeof(float));
-    rg.DescribeBuffer("object_transform", 16 * 2 * sizeof(float));
+    rg.DescribeBuffer("object_transform", 80 * 16 * 2 * sizeof(float));
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
+    rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
+    rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
+
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });

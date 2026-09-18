@@ -70,47 +70,8 @@ static VkImageType getVkImageType(VkImageViewType viewType) {
 	}
 }
 
-
-RenderGraph::RenderGraph(
-	const std::vector<std::string>& bufferNames,
-	const std::vector<std::string>& imageNames,
-	const std::vector<ShaderDesc>& shaderDescs)
-	:
-	renderer(nullptr), execGraph({})
+RenderGraph::RenderGraph()
 {
-
-	for (size_t i = 0; i < bufferNames.size(); ++i)
-	{
-		if (bufferBind.find(bufferNames[i]) != bufferBind.end())
-		{
-			throw std::runtime_error("Duplicate buffer name: " + bufferNames[i]);
-		}
-
-		bufferBind[bufferNames[i]] = buffResource.size();
-		buffResource.push_back({});
-	}
-
-	for (size_t i = 0; i < imageNames.size(); ++i)
-	{
-		if (imageBind.find(imageNames[i]) != imageBind.end())
-		{
-			throw std::runtime_error("Duplicate image name: " + imageNames[i]);
-		}
-		imageBind[imageNames[i]] = imgResource.size();
-		imgResource.push_back({});
-	}
-
-	for (size_t i = 0; i < shaderDescs.size(); ++i)
-	{
-		if (shaderBind.find(shaderDescs[i].name) != shaderBind.end())
-		{
-			throw std::runtime_error("Duplicate shader name: " + shaderDescs[i].name);
-		}
-		shaderBind[shaderDescs[i].name] = shaders.size();
-		shaders.push_back(shaderDescs[i]);
-		shaders.back().stages = (VkShaderStageFlagBits)0;
-		shaders.back().bytecode = VK_NULL_HANDLE;
-	}
 }
 
 RenderPass* RenderGraph::CreateRenderPass(
@@ -435,14 +396,13 @@ void RenderGraph::DescribeBuffer(
 	const std::string& name, 
 	uint32_t size)
 {
-
-	BufferResource* buff = QueryBuffer(name);
-	if (buff->isDefined > 0)
+	if (QueryBuffer(name) != nullptr)
 	{
 		throw std::runtime_error("vertex buffer redefinition\n");
 	}
-	buff->isDefined = 1;
-	buff->size = size;
+
+	buffResource.emplace_back(1, (VkBufferUsageFlags)0, (VkDeviceSize)size);
+	bufferBind[name] = buffResource.size() - 1;
 }
 
 void RenderGraph::DescribeImage(
@@ -454,15 +414,14 @@ void RenderGraph::DescribeImage(
 	VkSampleCountFlagBits samples, 
 	VkImageViewType viewType)
 {
-	ImageResource* img = QueryImage(name);
-	if (img->isDefined > 0)
+	if (QueryImage(name) != nullptr)
 	{
 		throw std::runtime_error("image redefinition\n");
 	}
-	if (width == SWAPCHAIN_RELATIVE || height == SWAPCHAIN_RELATIVE)
-	{
-		swcRelativeImages.push_back(img);
-	}
+
+	imgResource.push_back({});
+	imageBind[name] = imgResource.size() - 1;
+	ImageResource* img = &imgResource.back();
 
 	img->isDefined = 1;
 	img->width = width;
@@ -471,4 +430,25 @@ void RenderGraph::DescribeImage(
 	img->format = format;
 	img->samples = samples;
 	img->viewType = viewType;
+
+
+	if (width == SWAPCHAIN_RELATIVE || height == SWAPCHAIN_RELATIVE)
+	{
+		swcRelativeImages.push_back(img);
+	}
+}
+
+void RenderGraph::DescribeShader(
+	const std::string& name, 
+	const std::string& entryName, 
+	const std::string& path)
+{
+	if (QueryShader(name) != nullptr)
+	{
+		throw std::runtime_error("image redefinition\n");
+	}
+
+
+	shaders.emplace_back(name, entryName, path, (VkShaderStageFlagBits)0, VK_NULL_HANDLE);
+	shaderBind[name] = shaders.size() - 1;
 }

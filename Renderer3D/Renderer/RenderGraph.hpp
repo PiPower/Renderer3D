@@ -46,16 +46,14 @@ struct PipelineRenderingDesc
 class RenderGraph
 {
 public:
-	RenderGraph(
-		const std::vector<std::string>& bufferNames,
-		const std::vector<std::string>& imageNames,
-		const std::vector<ShaderDesc>& shaderDescs);
+	RenderGraph();
 
 	RenderPass* CreateRenderPass(
 		const std::string& name,
 		bool isGraphicsPass);
 
 	void Compile(Renderer* rendererInst);
+
 
 	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 
@@ -77,6 +75,11 @@ public:
 		VkFormat format,
 		VkSampleCountFlagBits samples,
 		VkImageViewType viewType);
+
+	void DescribeShader(
+		const std::string& name,
+		const std::string& entryName,
+		const std::string& path);
 
 private:
 	RenderingPipeline CompilePipeline(RenderPass* renderPass);

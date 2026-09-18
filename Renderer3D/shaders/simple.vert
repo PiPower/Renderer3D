@@ -25,10 +25,10 @@ layout(set = 0, binding = 0) uniform  Camera
     mat4 view;
 } camera;
 
-layout(set = 2, binding = 0) uniform  ObjTransform
+layout(set = 2, binding = 0) uniform  Object
 {
     mat4 transform;
-} objTransform;
+} obj;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
@@ -43,10 +43,10 @@ layout(location = 3) out vec4 worldPosLightCoord;
 void main() 
 {
 
-    worldPos = objTransform.transform * vec4(inPosition, 1.0);
+    worldPos = obj.transform * vec4(inPosition, 1.0);
     worldPosLightCoord = vec4(0.5, 0.7, 0.5, 1.0);
-    //faceNormal =  transpose(inverse(mat3(objectTransform.model))) * inNormal;
-    //texCoord = inTex;
+    faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
+    texCoord = inTex;
 
     gl_Position = camera.proj * camera.view * worldPos;
     
