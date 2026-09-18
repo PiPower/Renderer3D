@@ -71,14 +71,22 @@ void RenderPass::AddColorAttachment(const std::string& name)
 	{
 		throw std::runtime_error("Image does not exist\n");
 	}
-
+	if (imageBindings.find(name) != imageBindings.end())
+	{
+		throw std::runtime_error("Image is already bound\n");
+	}
 	img->aux_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+
+	outputImages.push_back(img);
+	imageBindings[name] = ImageClass(outputImages.size() - 1, 0, 1, 0);
 
 	blendAttachmets.push_back({});
 	VkPipelineColorBlendAttachmentState* blend = &blendAttachmets.back();
 	blend->colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	blend->blendEnable = VK_FALSE;
 	colorBlending.attachmentCount = (uint32_t)blendAttachmets.size();
+	colorBlending.pAttachments = blendAttachmets.data(); // blendAttachmets may rellocate so we need to reassing pointer
 }
 
 void RenderPass::AddDepthImage(const std::string& name)
