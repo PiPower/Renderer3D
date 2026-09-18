@@ -49,6 +49,9 @@ struct ImageClass
 struct RenderResources
 {
 	std::vector<const Buffer*> uniformBuffers;
+	std::vector<const Buffer*> vertexBuffers;
+	std::vector<const Buffer*> indexBuffers;
+
 	std::vector<const Image*> textures;
 };
 

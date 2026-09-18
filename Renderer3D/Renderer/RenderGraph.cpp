@@ -3,6 +3,22 @@
 #include <stdexcept>
 #include "ShaderCompiler.hpp"
 
+template<typename BufferType>
+static void FilterBuffers(
+	const std::vector<BufferType>& searchedBuffers,
+	const std::vector<const BufferResource*>& pointerHolder,
+	const std::vector<Buffer>& bufferPool,
+	const std::unordered_map<const BufferResource*, size_t>& bufferLookup,
+	std::vector<const Buffer*>* destBuffer)
+{
+	for (size_t i = 0; i < searchedBuffers.size(); i++)
+	{
+		const BufferResource* buff = pointerHolder[searchedBuffers[i].i];
+		size_t buffResIdx = bufferLookup.find(buff)->second;
+		destBuffer->push_back(&bufferPool[buffResIdx]);
+	}
+}
+
 static inline constexpr shaderc_shader_kind extendKind(
 	VkShaderStageFlags collection,
 	VkShaderStageFlags chosenStage,
@@ -156,13 +172,9 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 RenderResources RenderGraph::CreateRenderResources(RenderPass* renderPass)
 {
 	RenderResources frameResources = {};
-
-	for (size_t i = 0; i < renderPass->uniformBuffers.size(); i++)
-	{
-		const BufferResource* buff = renderPass->usedBuffers[renderPass->uniformBuffers[i].i];
-		size_t buffResIdx = bufferLookup[buff];
-		frameResources.uniformBuffers.push_back(&execGraph.bufferResources[buffResIdx]);
-	}
+	FilterBuffers(renderPass->uniformBuffers, renderPass->usedBuffers, execGraph.bufferResources, bufferLookup, &frameResources.uniformBuffers);
+	FilterBuffers(renderPass->vertexBuffers, renderPass->usedBuffers, execGraph.bufferResources, bufferLookup, &frameResources.vertexBuffers);
+	FilterBuffers(renderPass->indexBuffers, renderPass->usedBuffers, execGraph.bufferResources, bufferLookup, &frameResources.indexBuffers);
 
 	return frameResources;
 }
@@ -298,7 +310,7 @@ void RenderGraph::AllocateResources()
 	VkSurfaceCapabilitiesKHR capabilities = renderer->GetSwapchainCapabilities();
 	for (size_t i = 0; i < imgResource.size(); i++)
 	{
-		ImageResource* img = &imgResource[i];
+		ImageResource* img = imgResource[i];
 		if (img->isDefined == 0)
 		{
 			execGraph.imageResources.push_back({});
@@ -349,7 +361,7 @@ void RenderGraph::AllocateResources()
 
 	for (size_t i = 0; i < buffResource.size(); i++)
 	{
-		const BufferResource* buff = &buffResource[i];
+		const BufferResource* buff = buffResource[i];
 		VkBufferCreateInfo buffInfo = {};
 		buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		buffInfo.pNext = nullptr;
@@ -365,6 +377,18 @@ void RenderGraph::AllocateResources()
 	}
 }
 
+void RenderGraph::Render()
+{
+	for (size_t i = 0; i < execGraph.pipelines.size(); i++)
+	{
+		RunPipeline(execGraph.pipelines[i]);
+	}
+}
+
+void RenderGraph::RunPipeline(const RenderingPipeline& renderPipeline)
+{
+}
+
 ImageResource* RenderGraph::QueryImage(const std::string& name)
 {
 	auto it = imageBind.find(name);
@@ -373,7 +397,7 @@ ImageResource* RenderGraph::QueryImage(const std::string& name)
 		size_t index = it->second;
 		if (index < imgResource.size())
 		{
-			return &imgResource[index];
+			return imgResource[index];
 		}
 	}
 	return nullptr;
@@ -387,7 +411,7 @@ BufferResource* RenderGraph::QueryBuffer(const std::string& name)
 		size_t index = it->second;
 		if (index < buffResource.size())
 		{
-			return &buffResource[index];
+			return buffResource[index];
 		}
 	}
 
@@ -402,7 +426,7 @@ ShaderDesc* RenderGraph::QueryShader(const std::string& name)
 		size_t index = it->second;
 		if (index < shaders.size())
 		{
-			return &shaders[index];
+			return shaders[index];
 		}
 	}
 	return nullptr;
@@ -417,9 +441,9 @@ void RenderGraph::DescribeBuffer(
 		throw std::runtime_error("vertex buffer redefinition\n");
 	}
 
-	buffResource.emplace_back(1, (VkBufferUsageFlags)0, (VkDeviceSize)size);
+	buffResource.emplace_back(new  BufferResource(1, (VkBufferUsageFlags)0, (VkDeviceSize)size));
 	bufferBind[name] = buffResource.size() - 1;
-	bufferLookup[&buffResource.back()] = buffResource.size() - 1;
+	bufferLookup[buffResource.back()] = buffResource.size() - 1;
 }
 
 void RenderGraph::DescribeImage(
@@ -436,9 +460,9 @@ void RenderGraph::DescribeImage(
 		throw std::runtime_error("image redefinition\n");
 	}
 
-	imgResource.push_back({});
+	imgResource.push_back(new ImageResource);
 	imageBind[name] = imgResource.size() - 1;
-	ImageResource* img = &imgResource.back();
+	ImageResource* img = imgResource.back();
 
 	img->isDefined = 1;
 	img->width = width;
@@ -465,7 +489,6 @@ void RenderGraph::DescribeShader(
 		throw std::runtime_error("image redefinition\n");
 	}
 
-
-	shaders.emplace_back(name, entryName, path, (VkShaderStageFlagBits)0, VK_NULL_HANDLE);
+	shaders.emplace_back(new ShaderDesc(name, entryName, path, (VkShaderStageFlagBits)0, VK_NULL_HANDLE));
 	shaderBind[name] = shaders.size() - 1;
 }

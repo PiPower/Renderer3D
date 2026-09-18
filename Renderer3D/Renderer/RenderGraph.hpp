@@ -80,6 +80,7 @@ public:
 		const std::string& entryName,
 		const std::string& path);
 
+	void Render();
 private:
 	RenderingPipeline CompilePipeline(RenderPass* renderPass);
 
@@ -98,11 +99,13 @@ private:
 		BindLevel level);
 
 	void AllocateResources();
+
+	void RunPipeline(const RenderingPipeline& renderPipeline);
 private:
 	std::vector<RenderPass> renderPasses;
-	std::vector<ImageResource> imgResource;
-	std::vector<BufferResource> buffResource;
-	std::vector<ShaderDesc> shaders;
+	std::vector<ImageResource*> imgResource;
+	std::vector<BufferResource*> buffResource;
+	std::vector<ShaderDesc*> shaders;
 
 	std::unordered_map<const BufferResource*, size_t> bufferLookup;
 
