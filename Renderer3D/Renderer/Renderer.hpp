@@ -63,11 +63,15 @@ public:
 
 	VkPipelineLayout CreatePipelineLayout(const std::vector< VkDescriptorSetLayout>& sets);
 
+	VkCommandPool CreateGraphicsCommandPool();
+
 	inline VkFormat GetSwapchainFormat() const { return VK_FORMAT_R8G8B8A8_UNORM; }
 
 	inline VkDevice GetDevice() { return lgDev; }
 
 	inline VkSurfaceCapabilitiesKHR GetSwapchainCapabilities() { return swc.capabilities; }
+
+	inline uint32_t GetGfxQueueIdx() { return static_cast<uint32_t>(queueIdx[(uint32_t)QueueType::Graphics]); }
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

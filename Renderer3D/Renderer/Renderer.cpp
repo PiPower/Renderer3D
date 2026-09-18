@@ -271,6 +271,17 @@ VkPipelineLayout Renderer::CreatePipelineLayout(const std::vector<VkDescriptorSe
 	return layout;
 }
 
+VkCommandPool Renderer::CreateGraphicsCommandPool()
+{
+	VkCommandPool cmdPool;
+	VkCommandPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = GetGfxQueueIdx();
+	EXIT_ON_VK_ERROR(vkCreateCommandPool(lgDev, &poolInfo, nullptr, &cmdPool));
+
+	return cmdPool;
+}
+
 
 
 VkBool32 Renderer::VbDebugVal(

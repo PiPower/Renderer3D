@@ -52,6 +52,8 @@ struct RenderResources
 	std::vector<const Buffer*> vertexBuffers;
 	std::vector<const Buffer*> indexBuffers;
 
+
+	std::vector<const Image*> colorImages;
 	std::vector<const Image*> textures;
 };
 

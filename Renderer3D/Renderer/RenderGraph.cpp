@@ -87,6 +87,8 @@ static VkImageType getVkImageType(VkImageViewType viewType) {
 }
 
 RenderGraph::RenderGraph()
+	:
+	renderer(nullptr)
 {
 }
 
@@ -112,15 +114,31 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		throw std::runtime_error("Renderer is already bound\n");
 	}
 	renderer = rendererInst;
-	AllocateResources();
 
+	AllocateResources();
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
 		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
 		RenderResources passResources = CreateRenderResources(&renderPasses[i]);
+
 		execGraph.pipelines.push_back(pipeline);
 		execGraph.renderResources.push_back(passResources);
 	}
+
+	execGraph.gfxCmdPool = renderer->CreateGraphicsCommandPool();
+	execGraph.gfxCmdBuffers.resize(renderPasses.size());
+
+	VkCommandBufferAllocateInfo cmdBuffInfo = {};
+	cmdBuffInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmdBuffInfo.commandPool = execGraph.gfxCmdPool;
+	cmdBuffInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	cmdBuffInfo.commandBufferCount = (uint32_t)renderPasses.size();
+	if (vkAllocateCommandBuffers(renderer->GetDevice(), &cmdBuffInfo, execGraph.gfxCmdBuffers.data()) != VK_SUCCESS)
+	{
+		MessageBox(NULL, L"\nCommand buffers creation error\n", NULL, MB_OK);
+		exit(-1);
+	}
+
 }
 
 RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
@@ -175,6 +193,12 @@ RenderResources RenderGraph::CreateRenderResources(RenderPass* renderPass)
 	FilterBuffers(renderPass->uniformBuffers, renderPass->usedBuffers, execGraph.bufferResources, bufferLookup, &frameResources.uniformBuffers);
 	FilterBuffers(renderPass->vertexBuffers, renderPass->usedBuffers, execGraph.bufferResources, bufferLookup, &frameResources.vertexBuffers);
 	FilterBuffers(renderPass->indexBuffers, renderPass->usedBuffers, execGraph.bufferResources, bufferLookup, &frameResources.indexBuffers);
+
+	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
+	{
+		size_t imgIdx = imageLookup.find(renderPass->outputImages[i])->second;
+		frameResources.colorImages.push_back(&execGraph.imageResources[imgIdx]);
+	}
 
 	return frameResources;
 }
@@ -251,7 +275,7 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 		render.outputFormats.push_back(renderPass->outputImages[i]->format);
 	}
 
-	render.info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	render.info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 	render.info.pNext = nullptr;
 	render.info.viewMask = 0;
 	render.info.colorAttachmentCount = (uint32_t)render.outputFormats.size();
@@ -381,12 +405,16 @@ void RenderGraph::Render()
 {
 	for (size_t i = 0; i < execGraph.pipelines.size(); i++)
 	{
-		RunPipeline(execGraph.pipelines[i]);
+		RunPipeline(execGraph.pipelines[i], execGraph.renderResources[i]);
 	}
 }
 
-void RenderGraph::RunPipeline(const RenderingPipeline& renderPipeline)
+void RenderGraph::RunPipeline(
+	const RenderingPipeline& renderPipeline,
+	const RenderResources& resources)
 {
+
+
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)
@@ -432,6 +460,14 @@ ShaderDesc* RenderGraph::QueryShader(const std::string& name)
 	return nullptr;
 }
 
+void RenderGraph::UploadDataToBuffer(
+	const std::string& bufferName,
+	VkDeviceSize uploadSize,
+	const char* data)
+{
+
+}
+
 void RenderGraph::DescribeBuffer(
 	const std::string& name, 
 	uint32_t size)
@@ -462,8 +498,9 @@ void RenderGraph::DescribeImage(
 
 	imgResource.push_back(new ImageResource);
 	imageBind[name] = imgResource.size() - 1;
-	ImageResource* img = imgResource.back();
+	imageLookup[imgResource.back()] = imgResource.size() - 1;
 
+	ImageResource* img = imgResource.back();
 	img->isDefined = 1;
 	img->width = width;
 	img->height = height;
@@ -471,7 +508,6 @@ void RenderGraph::DescribeImage(
 	img->format = format;
 	img->samples = samples;
 	img->viewType = viewType;
-
 
 	if (width == SWAPCHAIN_RELATIVE || height == SWAPCHAIN_RELATIVE)
 	{

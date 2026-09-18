@@ -19,6 +19,8 @@ struct ExecutionGraph
 
 	// resources are copies of all above handles, they are to be fed to their render steps
 	std::vector<RenderResources> renderResources;
+	VkCommandPool gfxCmdPool;
+	std::vector<VkCommandBuffer> gfxCmdBuffers;
 };
 
 struct ShaderDesc
@@ -62,6 +64,11 @@ public:
 
 	ShaderDesc* QueryShader(const std::string& name);
 
+	void UploadDataToBuffer(
+		const std::string& bufferName,
+		VkDeviceSize uploadSize,
+		const char* data);
+
 	void DescribeBuffer(
 		const std::string& name,
 		uint32_t size);
@@ -100,7 +107,9 @@ private:
 
 	void AllocateResources();
 
-	void RunPipeline(const RenderingPipeline& renderPipeline);
+	void RunPipeline(
+		const RenderingPipeline& renderPipeline,
+		const RenderResources& resources);
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource*> imgResource;
@@ -108,6 +117,7 @@ private:
 	std::vector<ShaderDesc*> shaders;
 
 	std::unordered_map<const BufferResource*, size_t> bufferLookup;
+	std::unordered_map<const ImageResource*, size_t> imageLookup;
 
 	std::unordered_map<std::string, size_t> renderPassNames;
 	std::unordered_map<std::string, size_t> bufferBind;
