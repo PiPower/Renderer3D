@@ -101,7 +101,9 @@ void RenderGraph::Compile(Renderer* rendererInst)
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
 		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
+		RenderResources passResources = CreateRenderResources(&renderPasses[i]);
 		execGraph.pipelines.push_back(pipeline);
+		execGraph.renderResources.push_back(passResources);
 	}
 }
 
@@ -149,6 +151,20 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 
 
 	return pipelineOut;
+}
+
+RenderResources RenderGraph::CreateRenderResources(RenderPass* renderPass)
+{
+	RenderResources frameResources = {};
+
+	for (size_t i = 0; i < renderPass->uniformBuffers.size(); i++)
+	{
+		const BufferResource* buff = renderPass->usedBuffers[renderPass->uniformBuffers[i].i];
+		size_t buffResIdx = bufferLookup[buff];
+		frameResources.uniformBuffers.push_back(&execGraph.bufferResources[buffResIdx]);
+	}
+
+	return frameResources;
 }
 
 std::vector<VkPipelineShaderStageCreateInfo> RenderGraph::CompileShaders(RenderPass* renderPass)
@@ -403,6 +419,7 @@ void RenderGraph::DescribeBuffer(
 
 	buffResource.emplace_back(1, (VkBufferUsageFlags)0, (VkDeviceSize)size);
 	bufferBind[name] = buffResource.size() - 1;
+	bufferLookup[&buffResource.back()] = buffResource.size() - 1;
 }
 
 void RenderGraph::DescribeImage(

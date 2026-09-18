@@ -48,8 +48,8 @@ struct ImageClass
 
 struct RenderResources
 {
-	const std::vector<const Buffer&>& uniformBuffers;
-	const std::vector<const Image&>& textures;
+	std::vector<const Buffer*> uniformBuffers;
+	std::vector<const Image*> textures;
 };
 
 typedef void (*RenderFunction)(const RenderResources& args, VkCommandBuffer cmdBuff);

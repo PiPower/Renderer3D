@@ -54,7 +54,6 @@ public:
 
 	void Compile(Renderer* rendererInst);
 
-
 	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 
 	ImageResource* QueryImage(const std::string& name);
@@ -84,6 +83,8 @@ public:
 private:
 	RenderingPipeline CompilePipeline(RenderPass* renderPass);
 
+	RenderResources CreateRenderResources(RenderPass* renderPass);
+
 	std::vector<VkPipelineShaderStageCreateInfo> CompileShaders(RenderPass* renderPass);
 
 	PipelineInputDesc CreatePipelineInput(RenderPass* renderPass);
@@ -102,6 +103,8 @@ private:
 	std::vector<ImageResource> imgResource;
 	std::vector<BufferResource> buffResource;
 	std::vector<ShaderDesc> shaders;
+
+	std::unordered_map<const BufferResource*, size_t> bufferLookup;
 
 	std::unordered_map<std::string, size_t> renderPassNames;
 	std::unordered_map<std::string, size_t> bufferBind;
