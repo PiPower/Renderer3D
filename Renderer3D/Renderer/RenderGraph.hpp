@@ -8,7 +8,8 @@ struct RenderingPipeline
 {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
-	std::vector<VkDescriptorSetLayout> sets;
+	std::vector<VkDescriptorSetLayout> setLayouts;
+	std::vector<VkDescriptorSet> set;
 	RenderFunction renderFn;
 	std::vector<VkIndexType> indexTypes;
 };
@@ -110,7 +111,7 @@ private:
 
 	PipelineRenderingDesc CreatePipelineRendering(RenderPass* renderPass);
 
-	std::vector<VkDescriptorSetLayout> CreateSets(RenderPass* renderPass);
+	std::vector<VkDescriptorSetLayout> CreateSetLayouts(RenderPass* renderPass);
 
 	std::vector<VkDescriptorSetLayoutBinding> CreateBufferBindings(
 		const std::vector<UniformBuffer>& uniformBuffers,

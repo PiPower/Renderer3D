@@ -153,8 +153,8 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 {
 	RenderingPipeline pipelineOut = {};
 	pipelineOut.renderFn = renderPass->renderFn;
-	pipelineOut.sets = CreateSets(renderPass);
-	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.sets);
+	pipelineOut.setLayouts = CreateSetLayouts(renderPass);
+	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.setLayouts);
 
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderPass);
 	PipelineInputDesc inputDesc = CreatePipelineInput(renderPass);
@@ -297,7 +297,7 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 	return render;
 }
 
-std::vector<VkDescriptorSetLayout> RenderGraph::CreateSets(RenderPass* renderPass)
+std::vector<VkDescriptorSetLayout> RenderGraph::CreateSetLayouts(RenderPass* renderPass)
 {
 	std::vector<VkDescriptorSetLayout> setLayouts;
 
@@ -494,6 +494,7 @@ void RenderGraph::RunPipeline(
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPipeline.pipeline);
 	vkCmdBindVertexBuffers(cmdBuffer, 0, (uint32_t)resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
 	vkCmdBindIndexBuffer(cmdBuffer, resources.indexBuffers[0]->buff, 0, renderPipeline.indexTypes[0]);
+
 	renderPipeline.renderFn(resources, cmdBuffer);
 
 	vkCmdEndRendering(cmdBuffer);

@@ -25,6 +25,7 @@ struct IndexBuffer
 struct UniformBuffer
 {
 	size_t i;
+	uint32_t size;
 	BindLevel level;
 	VkShaderStageFlags stages;
 	uint8_t isDynamic : 1;
@@ -81,6 +82,7 @@ public:
 
 	void AddUniformBuffer(
 		const std::string& name, 
+		uint32_t size,
 		BindLevel level,
 		bool isBufferDynamic = false);
 

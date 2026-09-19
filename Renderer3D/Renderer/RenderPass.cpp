@@ -96,6 +96,7 @@ void RenderPass::AddDepthImage(const std::string& name)
 
 void RenderPass::AddUniformBuffer(
 	const std::string& name,
+	uint32_t size,
 	BindLevel level,
 	bool isBufferDynamic)
 {
@@ -110,10 +111,14 @@ void RenderPass::AddUniformBuffer(
 	{
 		throw std::runtime_error("Buffer with name '" + bufferBind->first + "' is already bound to pipeline.");
 	}
+	if (buf->size > size)
+	{
+		throw std::runtime_error("Uniform buffer is too large");
+	}
 
 	buf->usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	usedBuffers.push_back(buf);
-	uniformBuffers.emplace_back(usedBuffers.size()-1, level, VK_SHADER_STAGE_ALL, isBufferDynamic);
+	uniformBuffers.emplace_back(usedBuffers.size()-1, size, level, VK_SHADER_STAGE_ALL, isBufferDynamic);
 	bufferBindings[name] = { uniformBuffers.size() - 1, 1, 0, 0 };
 }
 
