@@ -4,7 +4,10 @@
 #include "Renderer/Scene.hpp"
 using namespace std;
 
-void RenderStep(const RenderResources& args, VkCommandBuffer cmdBuff);
+void RenderStep(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline);
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
@@ -65,6 +68,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 }
 
-void RenderStep(const RenderResources& args, VkCommandBuffer cmdBuff)
+void RenderStep(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline)
 {
+    uint32_t offsets[1] = { 0 };
+    vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
 }

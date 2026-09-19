@@ -537,13 +537,12 @@ void RenderGraph::RunPipeline(
 		vb[i] = resources.vertexBuffers[i]->buff;
 		vbOffsets[i] = 0;
 	}
-
 	vkCmdBeginRendering(cmdBuffer, &renderInfo->renderingInfo);
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPipeline.pipeline);
 	vkCmdBindVertexBuffers(cmdBuffer, 0, (uint32_t)resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
 	vkCmdBindIndexBuffer(cmdBuffer, resources.indexBuffers[0]->buff, 0, renderPipeline.indexTypes[0]);
 
-	renderPipeline.renderFn(resources, cmdBuffer);
+	renderPipeline.renderFn(resources, cmdBuffer, &renderPipeline);
 
 	vkCmdEndRendering(cmdBuffer);
 }

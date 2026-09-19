@@ -57,7 +57,9 @@ struct RenderResources
 	std::vector<const Image*> textures;
 };
 
-typedef void (*RenderFunction)(const RenderResources& args, VkCommandBuffer cmdBuff);
+struct RenderingPipeline;
+
+typedef void (*RenderFunction)(const RenderResources& args, VkCommandBuffer cmdBuff, const RenderingPipeline* pipeline);
 
 class RenderGraph;
 
