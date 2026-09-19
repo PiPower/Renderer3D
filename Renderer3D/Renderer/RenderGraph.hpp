@@ -81,7 +81,8 @@ public:
 
 	void DescribeBuffer(
 		const std::string& name,
-		uint64_t size);
+		uint64_t size,
+		bool isHostVisible = false);
 
 	void DescribeImage(
 		const std::string& name,

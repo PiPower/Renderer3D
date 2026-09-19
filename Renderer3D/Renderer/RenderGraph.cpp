@@ -407,8 +407,9 @@ void RenderGraph::AllocateResources()
 		buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		buffInfo.queueFamilyIndexCount = 0;
 		buffInfo.pQueueFamilyIndices = nullptr;
+		VkMemoryPropertyFlagBits memoryVisibility = buff->isHostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-		Buffer buffRes = renderer->AllocateBuffer(buffInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		Buffer buffRes = renderer->AllocateBuffer(buffInfo, memoryVisibility);
 		execGraph.bufferResources.push_back(buffRes);
 	}
 }
@@ -566,14 +567,15 @@ void RenderGraph::UploadDataToBuffer(
 
 void RenderGraph::DescribeBuffer(
 	const std::string& name, 
-	uint64_t size)
+	uint64_t size,
+	bool isHostVisible)
 {
 	if (QueryBuffer(name) != nullptr)
 	{
 		throw std::runtime_error("vertex buffer redefinition\n");
 	}
 
-	buffResource.emplace_back(new  BufferResource(1, (VkBufferUsageFlags)0, (VkDeviceSize)size));
+	buffResource.emplace_back(new  BufferResource(1, (VkBufferUsageFlags)0, (VkDeviceSize)size, isHostVisible));
 	bufferBind[name] = buffResource.size() - 1;
 	bufferLookup[buffResource.back()] = buffResource.size() - 1;
 }

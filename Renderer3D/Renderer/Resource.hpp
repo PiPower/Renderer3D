@@ -18,6 +18,7 @@ struct BufferResource
 	uint8_t isDefined : 1 = 0;
 	VkBufferUsageFlags usage = 0;
 	VkDeviceSize size = 0;
+	bool isHostVisible;
 };
 
 // struct that describes a usage of a image resource in a render graph.

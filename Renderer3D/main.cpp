@@ -18,8 +18,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("normal", scene.GetNormalsByteSize());
     rg.DescribeBuffer("texcoord", scene.GetTexByteSize());
     rg.DescribeBuffer("index", scene.GetIndexByteSize());
-    rg.DescribeBuffer("camera", 16 * 2 * sizeof(float));
-    rg.DescribeBuffer("object_transform", 80 * 16 * 2 * sizeof(float));
+    rg.DescribeBuffer("camera", 16 * 2 * sizeof(float), true);
+    rg.DescribeBuffer("object_transform", 80 * 16 * 2 * sizeof(float), true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
