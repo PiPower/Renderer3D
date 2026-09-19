@@ -111,7 +111,7 @@ void RenderPass::AddUniformBuffer(
 	{
 		throw std::runtime_error("Buffer with name '" + bufferBind->first + "' is already bound to pipeline.");
 	}
-	if (buf->size > size)
+	if (buf->size < size)
 	{
 		throw std::runtime_error("Uniform buffer is too large");
 	}

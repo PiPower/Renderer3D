@@ -13,13 +13,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
 	Scene scene("D:\\main1_sponza\\NewSponza_Main_glTF_003.gltf");
     
+    uint32_t trsfMatrixSize = 16 * sizeof(float);
+
     RenderGraph rg;
     rg.DescribeBuffer("vertex", scene.GetVertexByteSize());
     rg.DescribeBuffer("normal", scene.GetNormalsByteSize());
     rg.DescribeBuffer("texcoord", scene.GetTexByteSize());
     rg.DescribeBuffer("index", scene.GetIndexByteSize());
-    rg.DescribeBuffer("camera", 16 * 2 * sizeof(float), true);
-    rg.DescribeBuffer("object_transform", 80 * 16 * 2 * sizeof(float), true);
+    rg.DescribeBuffer("camera", 2 * trsfMatrixSize, true, true);
+    rg.DescribeBuffer("object_transform", 80 * trsfMatrixSize, true, true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
@@ -30,8 +32,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
     rpSimple->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
 
-    rpSimple->AddUniformBuffer("camera", BindLevel::PER_PASS);
-    rpSimple->AddUniformBuffer("object_transform", BindLevel::PER_OBJECT, true);
+    rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+    rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
 
 	rpSimple->AddColorAttachment("output");
 

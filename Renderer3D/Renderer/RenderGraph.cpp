@@ -155,6 +155,15 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 	pipelineOut.renderFn = renderPass->renderFn;
 	pipelineOut.setLayouts = CreateSetLayouts(renderPass);
 	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.setLayouts);
+	pipelineOut.descPool = CreateDescriptorPool(renderPass, pipelineOut.setLayouts);
+
+	VkDescriptorSetAllocateInfo descAlloc = {};
+	descAlloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	descAlloc.descriptorPool = pipelineOut.descPool;
+	descAlloc.descriptorSetCount = 3;
+	descAlloc.pSetLayouts = pipelineOut.setLayouts.data();
+	pipelineOut.sets.resize(3);
+	EXIT_ON_VK_ERROR(vkAllocateDescriptorSets(renderer->GetDevice(), &descAlloc, pipelineOut.sets.data()));
 
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages = CompileShaders(renderPass);
 	PipelineInputDesc inputDesc = CreatePipelineInput(renderPass);
@@ -299,7 +308,7 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 
 std::vector<VkDescriptorSetLayout> RenderGraph::CreateSetLayouts(RenderPass* renderPass)
 {
-	std::vector<VkDescriptorSetLayout> setLayouts;
+	std::vector<VkDescriptorSetLayout> setLayouts(3);
 
 	for (uint32_t i = 1; i <= static_cast<uint32_t>(BindLevel::PER_OBJECT); i++)
 	{
@@ -310,9 +319,47 @@ std::vector<VkDescriptorSetLayout> RenderGraph::CreateSetLayouts(RenderPass* ren
 		setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		setInfo.bindingCount = (uint32_t)bindings.size();
 		setInfo.pBindings = bindings.data();
-		setLayouts.push_back(renderer->CreateDescriptorSet(&setInfo));
+		setLayouts[i-1] = renderer->CreateDescriptorSet(&setInfo);
 	}
 	return setLayouts;
+}
+
+VkDescriptorPool RenderGraph::CreateDescriptorPool(
+	RenderPass* renderPass, 
+	const std::vector<VkDescriptorSetLayout>& setLayouts)
+{
+	VkDescriptorPool pool;
+	std::array<VkDescriptorPoolSize, 2> poolSizes;
+	uint32_t unifrom = 0, uniformDynamic = 0;
+	for (size_t i = 0; i < renderPass->uniformBuffers.size(); i++)
+	{
+		if (renderPass->uniformBuffers[i].isDynamic)
+		{
+			uniformDynamic++;
+		}
+		else
+		{
+			unifrom++;
+		}
+	}
+
+	poolSizes[0] = {};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[0].descriptorCount = unifrom;
+
+
+	poolSizes[1] = {};
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	poolSizes[1].descriptorCount = uniformDynamic;
+
+	VkDescriptorPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.maxSets = 3;
+	poolInfo.poolSizeCount = 2;
+	poolInfo.pPoolSizes = poolSizes.data();
+
+	EXIT_ON_VK_ERROR(vkCreateDescriptorPool(renderer->GetDevice(), &poolInfo, nullptr, &pool));
+	return pool;
 }
 
 std::vector<VkDescriptorSetLayoutBinding> RenderGraph::CreateBufferBindings(
@@ -408,6 +455,7 @@ void RenderGraph::AllocateResources()
 		buffInfo.queueFamilyIndexCount = 0;
 		buffInfo.pQueueFamilyIndices = nullptr;
 		VkMemoryPropertyFlagBits memoryVisibility = buff->isHostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		memoryVisibility = (VkMemoryPropertyFlagBits) (memoryVisibility | buff->isHostCoherent ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0);
 
 		Buffer buffRes = renderer->AllocateBuffer(buffInfo, memoryVisibility);
 		execGraph.bufferResources.push_back(buffRes);
@@ -569,14 +617,15 @@ void RenderGraph::UploadDataToBuffer(
 void RenderGraph::DescribeBuffer(
 	const std::string& name, 
 	uint64_t size,
-	bool isHostVisible)
+	bool isHostVisible,
+	bool isHostCoherent)
 {
 	if (QueryBuffer(name) != nullptr)
 	{
 		throw std::runtime_error("vertex buffer redefinition\n");
 	}
 
-	buffResource.emplace_back(new  BufferResource(1, (VkBufferUsageFlags)0, (VkDeviceSize)size, isHostVisible));
+	buffResource.emplace_back(new  BufferResource(1, isHostVisible, isHostCoherent,(VkBufferUsageFlags)0, (VkDeviceSize)size));
 	bufferBind[name] = buffResource.size() - 1;
 	bufferLookup[buffResource.back()] = buffResource.size() - 1;
 }

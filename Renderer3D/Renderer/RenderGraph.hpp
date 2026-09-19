@@ -8,8 +8,9 @@ struct RenderingPipeline
 {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
+	VkDescriptorPool descPool;
 	std::vector<VkDescriptorSetLayout> setLayouts;
-	std::vector<VkDescriptorSet> set;
+	std::vector<VkDescriptorSet> sets;
 	RenderFunction renderFn;
 	std::vector<VkIndexType> indexTypes;
 };
@@ -65,7 +66,6 @@ public:
 
 	void Compile(Renderer* rendererInst);
 
-	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 
 	ImageResource* QueryImage(const std::string& name);
 
@@ -83,7 +83,8 @@ public:
 	void DescribeBuffer(
 		const std::string& name,
 		uint64_t size,
-		bool isHostVisible = false);
+		bool isHostVisible = false,
+		bool isHostCoherent = false);
 
 	void DescribeImage(
 		const std::string& name,
@@ -100,10 +101,13 @@ public:
 		const std::string& path);
 
 	void Render();
+
+	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 private:
 	RenderingPipeline CompilePipeline(RenderPass* renderPass);
 
 	RenderResources CreateRenderResources(RenderPass* renderPass);
+
 
 	std::vector<VkPipelineShaderStageCreateInfo> CompileShaders(RenderPass* renderPass);
 
@@ -112,6 +116,10 @@ private:
 	PipelineRenderingDesc CreatePipelineRendering(RenderPass* renderPass);
 
 	std::vector<VkDescriptorSetLayout> CreateSetLayouts(RenderPass* renderPass);
+
+	VkDescriptorPool CreateDescriptorPool(
+		RenderPass* renderPass,
+		const std::vector<VkDescriptorSetLayout>& setLayouts);
 
 	std::vector<VkDescriptorSetLayoutBinding> CreateBufferBindings(
 		const std::vector<UniformBuffer>& uniformBuffers,

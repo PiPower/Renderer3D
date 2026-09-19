@@ -92,6 +92,8 @@ public:
 	inline VkSurfaceCapabilitiesKHR GetSwapchainCapabilities() { return swc.capabilities; }
 
 	inline uint32_t GetGfxQueueIdx() { return static_cast<uint32_t>(queueIdx[(uint32_t)QueueType::Graphics]); }
+
+	inline const VkPhysicalDeviceLimits& GetPhysicalDevLimits() { return devLimits; }
 private:
 	static VkBool32 VbDebugVal(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
