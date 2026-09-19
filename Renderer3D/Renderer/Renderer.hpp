@@ -33,6 +33,7 @@ struct Image
 
 struct Buffer
 {
+	VkMemoryPropertyFlagBits memProps;
 	VkDeviceMemory mem;
 	VkBuffer buff;
 	char* mmap;
@@ -61,6 +62,22 @@ public:
 	Buffer AllocateBuffer(
 		const VkBufferCreateInfo& buffInfo,
 		VkMemoryPropertyFlagBits memProps);
+
+	void UploadDataToBuffer(
+		Buffer* dst,
+		Buffer* src,
+		VkDeviceSize uploadSize,
+		VkDeviceSize srcOffset,
+		VkDeviceSize dstOffset);
+
+	void UploadDataToBuffer(
+		Buffer* dst,
+		const char* src,
+		VkDeviceSize uploadSize,
+		VkDeviceSize srcOffset,
+		VkDeviceSize dstOffset);
+
+	void RunCommandsAndSync(const VkSubmitInfo& submitInfo);
 
 	VkDescriptorSetLayout CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info);
 
@@ -132,5 +149,6 @@ private:
 	VkFence gfxQueueFinished;
 	uint32_t imageIndex;
 	Buffer stagingBuffer;
+	VkPhysicalDeviceLimits devLimits;
 };
 

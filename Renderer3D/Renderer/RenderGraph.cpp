@@ -192,7 +192,10 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 		throw std::runtime_error("Pipeline creation failed\n");
 	}
 
-
+	for (const IndexBuffer& indexBuffer : renderPass->indexBuffers)
+	{
+		pipelineOut.indexTypes.push_back(indexBuffer.dType);
+	}
 	return pipelineOut;
 }
 
@@ -455,12 +458,20 @@ void RenderGraph::Render()
 
 		EXIT_ON_VK_ERROR(vkResetCommandBuffer(execGraph.gfxCmdBuffers[i], 0));
 		EXIT_ON_VK_ERROR(vkBeginCommandBuffer(execGraph.gfxCmdBuffers[i], &cmdInfo));
+
 		RunPipeline(
 			execGraph.pipelines[i],
 			execGraph.renderResources[i],
 			&execGraph.renderInfo[i],
 			execGraph.gfxCmdBuffers[i]);
 
+		EXIT_ON_VK_ERROR(vkEndCommandBuffer(execGraph.gfxCmdBuffers[i]));
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &execGraph.gfxCmdBuffers[i];
+		renderer->RunCommandsAndSync(submitInfo);
 	}
 }
 
@@ -480,8 +491,8 @@ void RenderGraph::RunPipeline(
 
 	vkCmdBeginRendering(cmdBuffer, &renderInfo->renderingInfo);
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPipeline.pipeline);
-	vkCmdBindVertexBuffers(cmdBuffer, 0, resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
-
+	vkCmdBindVertexBuffers(cmdBuffer, 0, (uint32_t)resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
+	vkCmdBindIndexBuffer(cmdBuffer, resources.indexBuffers[0]->buff, 0, renderPipeline.indexTypes[0]);
 	renderPipeline.renderFn(resources, cmdBuffer);
 
 	vkCmdEndRendering(cmdBuffer);
@@ -550,8 +561,7 @@ void RenderGraph::UploadDataToBuffer(
 	}
 
 	size_t bufferIdx = buffIter->second;
-
-
+	renderer->UploadDataToBuffer(&execGraph.bufferResources[bufferIdx], src, uploadSize, srcOffset, dstOffset);
 }
 
 void RenderGraph::DescribeBuffer(

@@ -1,7 +1,7 @@
 #include "Renderer.hpp"
 //#pragma comment(lib,"C:\\VulkanSDK\\1.4.304.1\\Lib\\vulkan-1.lib")
 #pragma comment(lib, "vulkan-1.lib")
-
+#undef min
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)
 #define EXIT_ON_VK_ERROR(expr){VkResult __result__ = (expr); if(__result__ != VK_SUCCESS){\
@@ -251,6 +251,7 @@ Buffer Renderer::AllocateBuffer(
 	VkMemoryPropertyFlagBits memProps)
 {
 	Buffer out = {};
+	out.memProps = memProps;
 	out.buffInfo = buffInfo;
 	VkMemoryRequirements memoryRequirements = {};
 
@@ -264,6 +265,60 @@ Buffer Renderer::AllocateBuffer(
 		EXIT_ON_VK_ERROR(vkMapMemory(lgDev, out.mem, 0, out.buffInfo.size, 0, (void**) & out.mmap));
 	}
 	return out;
+}
+
+void Renderer::UploadDataToBuffer(
+	Buffer* dst,
+	Buffer* src, 
+	VkDeviceSize uploadSize,
+	VkDeviceSize srcOffset,
+	VkDeviceSize dstOffset)
+{
+	VkCommandBufferBeginInfo cmdInfo = { };
+	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	EXIT_ON_VK_ERROR(vkResetCommandBuffer(gfxCmd, 0));
+	EXIT_ON_VK_ERROR(vkBeginCommandBuffer(gfxCmd, &cmdInfo));
+
+	EXIT_ON_VK_ERROR(vkEndCommandBuffer(gfxCmd));
+
+	VkSubmitInfo submit = {};
+	submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit.commandBufferCount = 1;
+	submit.pCommandBuffers = &gfxCmd;
+	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submit, VK_NULL_HANDLE));
+	EXIT_ON_VK_ERROR(vkQueueWaitIdle(queues[Q_GRAPHICS]));
+}
+
+void Renderer::UploadDataToBuffer(
+	Buffer* dst,
+	const char* src, 
+	VkDeviceSize uploadSize,
+	VkDeviceSize srcOffset,
+	VkDeviceSize dstOffset)
+{
+	if (uploadSize > stagingBuffer.buffInfo.size)
+	{
+		MessageBox(NULL, L"requested upload size is larger than allocated staging buffer", NULL, MB_OK); 
+		exit(-1);
+	}
+	VkDeviceSize sizeCorretion = (devLimits.nonCoherentAtomSize - uploadSize % devLimits.nonCoherentAtomSize) % 64;
+	memcpy(stagingBuffer.mmap, src, uploadSize);
+	VkMappedMemoryRange range = {};
+	range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+	range.memory = stagingBuffer.mem;
+	range.offset = 0;
+	range.size = std::min(uploadSize + sizeCorretion, stagingBuffer.buffInfo.size);
+	EXIT_ON_VK_ERROR(vkFlushMappedMemoryRanges(lgDev, 1, &range));
+
+	UploadDataToBuffer(dst, &stagingBuffer, uploadSize, srcOffset, dstOffset);
+}
+
+void Renderer::RunCommandsAndSync(const VkSubmitInfo& submitInfo)
+{
+	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submitInfo, nullptr));
+	EXIT_ON_VK_ERROR(vkQueueWaitIdle(queues[Q_GRAPHICS]));
 }
 
 VkDescriptorSetLayout Renderer::CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info)
@@ -334,6 +389,7 @@ void Renderer::PickPhysicalDevice()
 			features.fillModeNonSolid)
 		{
 			phDev = dev;
+			devLimits = props.limits;
 			return;
 		}
 	}

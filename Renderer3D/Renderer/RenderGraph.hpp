@@ -10,6 +10,7 @@ struct RenderingPipeline
 	VkPipelineLayout layout;
 	std::vector<VkDescriptorSetLayout> sets;
 	RenderFunction renderFn;
+	std::vector<VkIndexType> indexTypes;
 };
 
 struct RenderInfoStruct

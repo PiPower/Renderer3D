@@ -9,7 +9,7 @@ void RenderStep(const RenderResources& args, VkCommandBuffer cmdBuff);
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
     Window wnd(1600, 900, L"yolo", L"test");
-	Renderer renderer(hInstance, wnd.GetWindowHWND());
+	Renderer renderer(hInstance, wnd.GetWindowHWND(), 100'000'000);
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
 	Scene scene("D:\\main1_sponza\\NewSponza_Main_glTF_003.gltf");
     
@@ -44,6 +44,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	rg.Compile(&renderer);
     rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
+    rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
+    rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
+    rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
+
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)
     {
