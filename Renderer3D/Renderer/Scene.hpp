@@ -31,20 +31,20 @@ public:
 
 	inline uint64_t GetIndexByteSize() { return indexCount * sizeof(uint32_t); }
 
-	inline Vec3* GetVertexPtr() { return vertices; }
+	inline Vec3* GetVertexPtr() { return vertices.data(); }
 
-	inline Vec3* GetNormalsPtr() { return normals; }
+	inline Vec3* GetNormalsPtr() { return normals.data(); }
 
-	inline Vec2* GetTexPtr() { return texCoords; }
+	inline Vec2* GetTexPtr() { return texCoords.data(); }
 
-	inline uint32_t* GetIndexPtr() { return indecies; }
+	inline uint32_t* GetIndexPtr() { return indecies.data(); }
 private:
 	size_t vertexCount = 0;
 	size_t indexCount = 0;
-	Vec3* vertices;
-	Vec3* normals;
-	Vec2* texCoords;
-	uint32_t* indecies;
+	std::vector<Vec3> vertices;
+	std::vector<Vec3> normals;
+	std::vector<Vec2> texCoords;
+	std::vector <uint32_t> indecies;
 	std::vector<uint32_t> materialTextureIdx;
 };
 

@@ -35,38 +35,38 @@ Scene::Scene(std::string path)
         indexCount += scene->mMeshes[i]->mNumFaces * 3;
     }
 
-    vertices = new Vec3[vertexCount];
-    normals = new Vec3[vertexCount];
-    texCoords = new Vec2[vertexCount];
-	indecies = new uint32_t[indexCount];    
+    vertices.resize(vertexCount);
+    normals.resize(vertexCount);
+    texCoords.resize(vertexCount);
+	indecies.resize(indexCount);
 	size_t vecOffest = 0;
+    size_t idxOffset = 0;
     for (size_t i = 0; i < scene->mNumMeshes; i++)
     {
         for (size_t j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
         {
 
-            vertices[vecOffest].x = scene->mMeshes[i]->mVertices[j].y;
-            vertices[vecOffest].y = scene->mMeshes[i]->mVertices[j].z;
-            vertices[vecOffest].z = scene->mMeshes[i]->mVertices[j].x;
+            vertices.at(vecOffest + j).x =  scene->mMeshes[i]->mVertices[j].y;
+            vertices.at(vecOffest + j).y =  scene->mMeshes[i]->mVertices[j].z;
+            vertices.at(vecOffest + j).z =  scene->mMeshes[i]->mVertices[j].x;
 
-            normals[vecOffest].x = scene->mMeshes[i]->mNormals[j].x;
-            normals[vecOffest].y = scene->mMeshes[i]->mNormals[j].y;
-            normals[vecOffest].z = scene->mMeshes[i]->mNormals[j].z;
+            normals.at(vecOffest + j).x =  scene->mMeshes[i]->mNormals[j].x;
+            normals.at(vecOffest + j).y =  scene->mMeshes[i]->mNormals[j].y;
+            normals.at(vecOffest + j).z =  scene->mMeshes[i]->mNormals[j].z;
 
-            texCoords[vecOffest].x = scene->mMeshes[i]->mTextureCoords[0][j].x;
-            texCoords[vecOffest].y = scene->mMeshes[i]->mTextureCoords[0][j].y;
+            texCoords.at(vecOffest + j).x = scene->mMeshes[i]->mTextureCoords[0][j].x;
+            texCoords.at(vecOffest + j).y = scene->mMeshes[i]->mTextureCoords[0][j].y;
            
-            vecOffest++;
         }
+        vecOffest += scene->mMeshes[i]->mNumVertices;
 
         for (size_t j = 0; j < scene->mMeshes[i]->mNumFaces; j++)
         {
-            indecies[j * 3 + 0] = scene->mMeshes[i]->mFaces[j].mIndices[0];
-            indecies[j * 3 + 1] = scene->mMeshes[i]->mFaces[j].mIndices[1];
-            indecies[j * 3 + 2] = scene->mMeshes[i]->mFaces[j].mIndices[2];
-            
+            indecies.at((idxOffset + j) * 3 + 0) = vecOffest + scene->mMeshes[i]->mFaces[j].mIndices[0];
+            indecies.at((idxOffset + j) * 3 + 1) = vecOffest + scene->mMeshes[i]->mFaces[j].mIndices[1];
+            indecies.at((idxOffset + j) * 3 + 2) = vecOffest + scene->mMeshes[i]->mFaces[j].mIndices[2];
         }
-
+        idxOffset += scene->mMeshes[i]->mNumFaces;
     }
-
+    int x = 2;
 }
