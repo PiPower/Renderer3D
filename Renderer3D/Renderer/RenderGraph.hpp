@@ -134,6 +134,10 @@ private:
 		const RenderResources& resources,
 		RenderInfoStruct* renderInfo,
 		VkCommandBuffer cmdBuffer);
+
+	void FillDescriptorSets(
+		RenderPass* renderPass,
+		std::vector<VkDescriptorSet>* sets);
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource*> imgResource;

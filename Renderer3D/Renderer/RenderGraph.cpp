@@ -127,6 +127,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
 		RenderResources passResources = CreateRenderResources(&renderPasses[i]);
 		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources);
+		FillDescriptorSets(&renderPasses[i], &pipeline.sets);
 
 		execGraph.pipelines.push_back(std::move(pipeline));
 		execGraph.renderResources.push_back(passResources);
@@ -454,10 +455,12 @@ void RenderGraph::AllocateResources()
 		buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		buffInfo.queueFamilyIndexCount = 0;
 		buffInfo.pQueueFamilyIndices = nullptr;
-		VkMemoryPropertyFlagBits memoryVisibility = buff->isHostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		memoryVisibility = (VkMemoryPropertyFlagBits) (memoryVisibility | buff->isHostCoherent ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0);
 
-		Buffer buffRes = renderer->AllocateBuffer(buffInfo, memoryVisibility);
+		VkMemoryPropertyFlagBits memoryVisibility = buff->isHostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		VkMemoryPropertyFlagBits coherence = buff->isHostCoherent ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : (VkMemoryPropertyFlagBits)0;
+		VkMemoryPropertyFlagBits properties = (VkMemoryPropertyFlagBits)(memoryVisibility | coherence);
+
+		Buffer buffRes = renderer->AllocateBuffer(buffInfo, properties);
 		execGraph.bufferResources.push_back(buffRes);
 	}
 }
@@ -545,6 +548,58 @@ void RenderGraph::RunPipeline(
 	renderPipeline.renderFn(resources, cmdBuffer, &renderPipeline);
 
 	vkCmdEndRendering(cmdBuffer);
+}
+
+void RenderGraph::FillDescriptorSets(
+	RenderPass* renderPass, 
+	std::vector<VkDescriptorSet>* sets)
+{
+	size_t writeSetCount = renderPass->uniformBuffers.size();
+	std::vector<VkWriteDescriptorSet> writeSets(writeSetCount);
+	std::vector<VkDescriptorBufferInfo> descBuffInfos(writeSetCount);
+	uint32_t perPassBind = 0, perMaterialBind = 0, perObjBind = 0;
+
+	for (size_t i = 0; i < writeSets.size(); i++)
+	{
+		const BufferResource* buffResource = renderPass->usedBuffers[renderPass->uniformBuffers[i].i];
+		size_t bufferIndex = bufferLookup[buffResource];
+		
+		VkDescriptorBufferInfo* buffInfo = &descBuffInfos[i];
+		*buffInfo = {};
+		buffInfo->buffer = execGraph.bufferResources[bufferIndex].buff;
+		buffInfo->offset = 0;
+		buffInfo->range = renderPass->uniformBuffers[i].size;
+
+		VkWriteDescriptorSet* writeSet = &writeSets[i];
+		*writeSet = {};
+		writeSet->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeSet->dstArrayElement = 0;
+		writeSet->descriptorCount = 1;
+		writeSet->descriptorType = renderPass->uniformBuffers[i].isDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		writeSet->pBufferInfo = buffInfo;
+
+		switch (renderPass->uniformBuffers[i].level)
+		{
+		case BindLevel::PER_PASS: 
+			writeSet->dstSet = (*sets)[0];
+			writeSet->dstBinding = perPassBind++;
+			break;
+		case BindLevel::PER_MATERIAL:
+			writeSet->dstSet = (*sets)[1];
+			writeSet->dstBinding = perMaterialBind++;
+			break;
+		case BindLevel::PER_OBJECT:
+			writeSet->dstSet = (*sets)[2];
+			writeSet->dstBinding = perObjBind++;
+			break;
+		default:
+			MessageBox(NULL, L"Incorrect BindLevel", NULL, MB_OK);
+			exit(-1);
+			break;
+		}
+	}
+
+	vkUpdateDescriptorSets(renderer->GetDevice(), (uint32_t)writeSets.size(), writeSets.data(), 0, nullptr);
 }
 
 ImageResource* RenderGraph::QueryImage(const std::string& name)
