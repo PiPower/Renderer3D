@@ -37,7 +37,7 @@ Scene::Scene(std::string path)
 
     vertices = new Vec3[vertexCount];
     normals = new Vec3[vertexCount];
-    texCoords = new Vec3[vertexCount];
+    texCoords = new Vec2[vertexCount];
 	indecies = new uint32_t[indexCount];    
 	size_t vecOffest = 0;
     for (size_t i = 0; i < scene->mNumMeshes; i++)

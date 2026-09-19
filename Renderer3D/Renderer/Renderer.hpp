@@ -35,6 +35,8 @@ struct Buffer
 {
 	VkDeviceMemory mem;
 	VkBuffer buff;
+	char* mmap;
+	VkBufferCreateInfo buffInfo;
 };
 
 class Renderer
@@ -42,7 +44,8 @@ class Renderer
 public:
 	Renderer(
 		HINSTANCE hinstance,
-		HWND hwnd);
+		HWND hwnd,
+		uint64_t stagingSize = 10'000'000);
 
 	static void OnResize(
 		HWND hwnd,
@@ -128,5 +131,6 @@ private:
 	VkSemaphore renderingFinished;
 	VkFence gfxQueueFinished;
 	uint32_t imageIndex;
+	Buffer stagingBuffer;
 };
 

@@ -42,7 +42,8 @@ inline static VkDeviceQueueCreateInfo CreateQueueInfo(
 
 Renderer::Renderer(
 	HINSTANCE hinstance, 
-	HWND hwnd)
+	HWND hwnd,
+	uint64_t stagingSize)
 	:
 	windowHwnd(hwnd), swc({})
 {
@@ -59,6 +60,14 @@ Renderer::Renderer(
 	CreateCommandStructs();
 	PrepareRenderingResources();
 	CreateSynchPrim();
+
+	VkBufferCreateInfo buffInfo = {};
+	buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffInfo.size = stagingSize;
+	buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	stagingBuffer = AllocateBuffer(buffInfo, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 }
 
 void Renderer::OnResize(
@@ -242,13 +251,18 @@ Buffer Renderer::AllocateBuffer(
 	VkMemoryPropertyFlagBits memProps)
 {
 	Buffer out = {};
+	out.buffInfo = buffInfo;
 	VkMemoryRequirements memoryRequirements = {};
 
-	EXIT_ON_VK_ERROR(vkCreateBuffer(lgDev, &buffInfo, nullptr, &out.buff));
+	EXIT_ON_VK_ERROR(vkCreateBuffer(lgDev, &out.buffInfo, nullptr, &out.buff));
 	vkGetBufferMemoryRequirements(lgDev, out.buff, &memoryRequirements);
 	out.mem = AllocateMemory(memProps, memoryRequirements);
 	EXIT_ON_VK_ERROR(vkBindBufferMemory(lgDev, out.buff, out.mem, 0));
 
+	if ( (memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) > 0)
+	{
+		EXIT_ON_VK_ERROR(vkMapMemory(lgDev, out.mem, 0, out.buffInfo.size, 0, (void**) & out.mmap));
+	}
 	return out;
 }
 

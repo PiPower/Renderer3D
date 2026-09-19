@@ -8,22 +8,21 @@ void RenderStep(const RenderResources& args, VkCommandBuffer cmdBuff);
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
-	Scene scene("D:\\main1_sponza\\NewSponza_Main_glTF_003.gltf");
     Window wnd(1600, 900, L"yolo", L"test");
 	Renderer renderer(hInstance, wnd.GetWindowHWND());
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
+	Scene scene("D:\\main1_sponza\\NewSponza_Main_glTF_003.gltf");
     
     RenderGraph rg;
-    rg.DescribeBuffer("vertex", 1000 * sizeof(float));
-    rg.DescribeBuffer("normal", 1000 * sizeof(float));
-    rg.DescribeBuffer("texcoord", 1000 * sizeof(float));
-    rg.DescribeBuffer("index", 1000 * sizeof(uint32_t));
+    rg.DescribeBuffer("vertex", scene.GetVertexByteSize());
+    rg.DescribeBuffer("normal", scene.GetNormalsByteSize());
+    rg.DescribeBuffer("texcoord", scene.GetTexByteSize());
+    rg.DescribeBuffer("index", scene.GetIndexByteSize());
     rg.DescribeBuffer("camera", 16 * 2 * sizeof(float));
     rg.DescribeBuffer("object_transform", 80 * 16 * 2 * sizeof(float));
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
-
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
@@ -44,7 +43,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     //rpSimple->AddOutputImage("output");
 
 	rg.Compile(&renderer);
-
+    rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)
     {

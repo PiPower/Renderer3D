@@ -152,6 +152,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 {
 	RenderingPipeline pipelineOut = {};
+	pipelineOut.renderFn = renderPass->renderFn;
 	pipelineOut.sets = CreateSets(renderPass);
 	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.sets);
 
@@ -469,8 +470,19 @@ void RenderGraph::RunPipeline(
 	RenderInfoStruct* renderInfo,
 	VkCommandBuffer cmdBuffer)
 {
-	vkCmdBeginRendering(cmdBuffer, &renderInfo->renderingInfo);
+	std::vector<VkBuffer> vb(resources.vertexBuffers.size());
+	std::vector<VkDeviceSize> vbOffsets(resources.vertexBuffers.size());
+	for (size_t i = 0; i < vb.size(); i++)
+	{
+		vb[i] = resources.vertexBuffers[i]->buff;
+		vbOffsets[i] = 0;
+	}
 
+	vkCmdBeginRendering(cmdBuffer, &renderInfo->renderingInfo);
+	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPipeline.pipeline);
+	vkCmdBindVertexBuffers(cmdBuffer, 0, resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
+
+	renderPipeline.renderFn(resources, cmdBuffer);
 
 	vkCmdEndRendering(cmdBuffer);
 }
@@ -520,15 +532,31 @@ ShaderDesc* RenderGraph::QueryShader(const std::string& name)
 
 void RenderGraph::UploadDataToBuffer(
 	const std::string& bufferName,
-	VkDeviceSize uploadSize,
-	const char* data)
+	uint64_t uploadSize,
+	const char* src,
+	uint64_t srcOffset,
+	uint64_t dstOffset)
 {
+	if (!renderer)
+	{
+		throw std::runtime_error("Graph is not compiled, operation of data upload is not permitted\n");
+	}
+
+	auto buffIter = bufferBind.find(bufferName);
+	if (buffIter == bufferBind.end())
+	{
+		throw std::runtime_error("Buffer is not found\n");
+
+	}
+
+	size_t bufferIdx = buffIter->second;
+
 
 }
 
 void RenderGraph::DescribeBuffer(
 	const std::string& name, 
-	uint32_t size)
+	uint64_t size)
 {
 	if (QueryBuffer(name) != nullptr)
 	{

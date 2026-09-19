@@ -9,6 +9,7 @@ struct RenderingPipeline
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
 	std::vector<VkDescriptorSetLayout> sets;
+	RenderFunction renderFn;
 };
 
 struct RenderInfoStruct
@@ -72,12 +73,14 @@ public:
 
 	void UploadDataToBuffer(
 		const std::string& bufferName,
-		VkDeviceSize uploadSize,
-		const char* data);
+		uint64_t uploadSize,
+		const char* src,
+		uint64_t srcOffset,
+		uint64_t dstOffset);
 
 	void DescribeBuffer(
 		const std::string& name,
-		uint32_t size);
+		uint64_t size);
 
 	void DescribeImage(
 		const std::string& name,
