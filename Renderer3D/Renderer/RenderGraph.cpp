@@ -472,7 +472,7 @@ void RenderGraph::AllocateResources()
 		VkImageViewCreateInfo viewInfo = {};
 		VkExtent3D imgExtent = {};
 		imgExtent.width = img->width == SWAPCHAIN_RELATIVE ? capabilities.currentExtent.width : img->width;
-		imgExtent.height = img->height == SWAPCHAIN_RELATIVE ? capabilities.currentExtent.width : img->height;
+		imgExtent.height = img->height == SWAPCHAIN_RELATIVE ? capabilities.currentExtent.height : img->height;
 		imgExtent.depth = 1;
 
 		imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
