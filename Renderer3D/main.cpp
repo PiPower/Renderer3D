@@ -86,6 +86,22 @@ void RenderStep(
     VkCommandBuffer cmdBuff,
     const RenderingPipeline* pipeline)
 {
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = 1600;
+    viewport.height = 900;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(cmdBuff, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = { 1600, 900 };
+    vkCmdSetScissor(cmdBuff, 0, 1, &scissor);
+
     uint32_t offsets[1] = { 0 };
     vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
+
+    vkCmdDrawIndexed(cmdBuff, 36, 1, 0, 0, 1);
 }

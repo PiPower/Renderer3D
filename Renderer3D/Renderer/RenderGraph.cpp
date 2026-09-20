@@ -451,7 +451,7 @@ void RenderGraph::AllocateResources()
 		buffInfo.pNext = nullptr;
 		buffInfo.flags = 0;
 		buffInfo.size = buff->size;
-		buffInfo.usage = buff->usage;
+		buffInfo.usage = buff->usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		buffInfo.queueFamilyIndexCount = 0;
 		buffInfo.pQueueFamilyIndices = nullptr;

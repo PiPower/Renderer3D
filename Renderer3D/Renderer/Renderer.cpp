@@ -280,6 +280,13 @@ void Renderer::UploadDataToBuffer(
 
 	EXIT_ON_VK_ERROR(vkResetCommandBuffer(gfxCmd, 0));
 	EXIT_ON_VK_ERROR(vkBeginCommandBuffer(gfxCmd, &cmdInfo));
+	
+	VkBufferCopy copy = {};
+	copy.dstOffset = 0;
+	copy.srcOffset = 0;
+	copy.size = uploadSize;
+
+	vkCmdCopyBuffer(gfxCmd, src->buff, dst->buff, 1, &copy);
 
 	EXIT_ON_VK_ERROR(vkEndCommandBuffer(gfxCmd));
 
