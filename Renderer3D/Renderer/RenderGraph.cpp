@@ -150,7 +150,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		exit(-1);
 	}
 
-
+	InitializeLayouts(initLayout);
 }
 
 void RenderGraph::FindInitialLayoutForImages(
@@ -170,6 +170,50 @@ void RenderGraph::FindInitialLayoutForImages(
 		}
 
 	}
+}
+
+void RenderGraph::InitializeLayouts(const std::vector<VkImageLayout>& initialLayouts)
+{
+	std::vector<VkImageMemoryBarrier> imgBarriers(initialLayouts.size());
+	for (size_t i = 0; i < imgBarriers.size(); i++)
+	{
+		VkImageMemoryBarrier* barrier = &imgBarriers[i];
+		*barrier = {};
+		barrier->sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier->srcAccessMask = 0;
+		barrier->dstAccessMask = 0;
+		barrier->oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barrier->newLayout = initialLayouts[i];
+		barrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier->image = execGraph.imageResources[i].img;
+		barrier->subresourceRange.aspectMask = GetAspectMask(imgResource[i]->format);
+		barrier->subresourceRange.baseMipLevel = 0;
+		barrier->subresourceRange.levelCount = 1;
+		barrier->subresourceRange.baseArrayLayer = 0;
+		barrier->subresourceRange.layerCount = imgResource[i]->layers;
+	}
+
+	VkCommandBuffer cmdBuff = execGraph.gfxCmdBuffers[0];
+
+	VkCommandBufferBeginInfo cmdInfo = { };
+	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuff;
+
+
+	EXIT_ON_VK_ERROR(vkResetCommandBuffer(cmdBuff, 0));
+	EXIT_ON_VK_ERROR(vkBeginCommandBuffer(cmdBuff, &cmdInfo));
+
+	vkCmdPipelineBarrier(cmdBuff, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+															0, 0, nullptr, 0, nullptr, (uint32_t)imgBarriers.size(), imgBarriers.data());
+	EXIT_ON_VK_ERROR(vkEndCommandBuffer(cmdBuff));
+	renderer->RunCommandsAndSync(submitInfo);
+
 }
 
 RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)

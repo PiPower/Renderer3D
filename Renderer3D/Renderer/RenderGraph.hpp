@@ -66,10 +66,6 @@ public:
 
 	void Compile(Renderer* rendererInst);
 
-	void FindInitialLayoutForImages(
-		RenderPass* renderPass,
-		std::vector<VkImageLayout>* layouts);
-
 	ImageResource* QueryImage(const std::string& name);
 
 	BufferResource* QueryBuffer(const std::string& name);
@@ -113,7 +109,6 @@ private:
 
 	RenderResources CreateRenderResources(RenderPass* renderPass);
 
-
 	std::vector<VkPipelineShaderStageCreateInfo> CompileShaders(RenderPass* renderPass);
 
 	PipelineInputDesc CreatePipelineInput(RenderPass* renderPass);
@@ -143,6 +138,12 @@ private:
 	void FillDescriptorSets(
 		RenderPass* renderPass,
 		std::vector<VkDescriptorSet>* sets);
+
+	void FindInitialLayoutForImages(
+		RenderPass* renderPass,
+		std::vector<VkImageLayout>* layouts);
+
+	void InitializeLayouts(const std::vector<VkImageLayout>& initialLayouts);
 private:
 	std::vector<RenderPass> renderPasses;
 	std::vector<ImageResource*> imgResource;
