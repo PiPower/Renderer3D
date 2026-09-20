@@ -75,7 +75,7 @@ struct RenderResources
 
 struct RenderingPipeline;
 
-typedef void (*RenderFunction)(const RenderResources& args, VkCommandBuffer cmdBuff, const RenderingPipeline* pipeline);
+typedef void (*RenderFunction)(const RenderResources& args, VkCommandBuffer cmdBuff, const RenderingPipeline* pipeline, void* args2);
 
 class RenderGraph;
 

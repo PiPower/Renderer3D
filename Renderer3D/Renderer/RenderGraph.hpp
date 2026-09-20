@@ -101,7 +101,7 @@ public:
 		const std::string& entryName,
 		const std::string& path);
 
-	void Render();
+	void Render(void* args);
 
 	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 private:
@@ -133,7 +133,8 @@ private:
 		const RenderingPipeline& renderPipeline,
 		const RenderResources& resources,
 		RenderInfoStruct* renderInfo,
-		VkCommandBuffer cmdBuffer);
+		VkCommandBuffer cmdBuffer,
+		void* args);
 
 	void FillDescriptorSets(
 		RenderPass* renderPass,

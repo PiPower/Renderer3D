@@ -22,6 +22,20 @@ struct RenderItem
 	uint32_t uboOffset;
 };
 
+struct MeshCollection
+{
+	std::vector<uint32_t> vbOffset;
+	std::vector<uint32_t> ibOffset;
+	std::vector<uint32_t> indexCount;
+	std::vector<uint32_t> materialIndex;
+};
+
+struct RenderingData
+{
+	const std::vector<RenderItem>& renderItems;
+	const MeshCollection& sceneGeometry;
+
+};
 class Scene
 {
 public:
@@ -32,6 +46,8 @@ public:
 		const Eigen::Matrix4f& transform);
 
 	void UploadObjectTransforms(char* mmap);
+
+	RenderingData GetRenderingData() { return{ renderItems, sceneGeometry }; }
 
 	inline size_t GetRenderItemCount() { return renderItems.size(); }
 
@@ -55,6 +71,7 @@ public:
 
 	inline uint32_t* GetIndexPtr() { return indecies.data(); }
 private:
+	MeshCollection sceneGeometry;
 	size_t vertexCount = 0;
 	size_t indexCount = 0;
 	std::vector<Vec3> vertices;

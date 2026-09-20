@@ -561,14 +561,14 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& res
 		attachmentInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		attachmentInfo->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachmentInfo->clearValue.color = { 0, 0, 0, 1.0f };
+		attachmentInfo->clearValue.color = { 0.4, 0.9, 0.9, 1.0f };
 		attachmentInfo->clearValue.depthStencil = { 1.0f, 0 };
 	}
 
 	return info;
 }
 
-void RenderGraph::Render()
+void RenderGraph::Render(void* args)
 {
 	for (size_t i = 0; i < execGraph.pipelines.size(); i++)
 	{
@@ -583,7 +583,8 @@ void RenderGraph::Render()
 			execGraph.pipelines[i],
 			execGraph.renderResources[i],
 			&execGraph.renderInfo[i],
-			execGraph.gfxCmdBuffers[i]);
+			execGraph.gfxCmdBuffers[i],
+			args);
 
 		EXIT_ON_VK_ERROR(vkEndCommandBuffer(execGraph.gfxCmdBuffers[i]));
 
@@ -599,7 +600,8 @@ void RenderGraph::RunPipeline(
 	const RenderingPipeline& renderPipeline,
 	const RenderResources& resources,
 	RenderInfoStruct* renderInfo,
-	VkCommandBuffer cmdBuffer)
+	VkCommandBuffer cmdBuffer,
+	void* args)
 {
 	std::vector<VkBuffer> vb(resources.vertexBuffers.size());
 	std::vector<VkDeviceSize> vbOffsets(resources.vertexBuffers.size());
@@ -613,7 +615,7 @@ void RenderGraph::RunPipeline(
 	vkCmdBindVertexBuffers(cmdBuffer, 0, (uint32_t)resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
 	vkCmdBindIndexBuffer(cmdBuffer, resources.indexBuffers[0]->buff, 0, renderPipeline.indexTypes[0]);
 
-	renderPipeline.renderFn(resources, cmdBuffer, &renderPipeline);
+	renderPipeline.renderFn(resources, cmdBuffer, &renderPipeline, args);
 
 	vkCmdEndRendering(cmdBuffer);
 }

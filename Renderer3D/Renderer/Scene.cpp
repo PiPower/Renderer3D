@@ -68,6 +68,11 @@ Scene::Scene(std::string path)
             indecies.at((idxOffset + j) * 3 + 2) = scene->mMeshes[i]->mFaces[j].mIndices[2];
         }
 
+        sceneGeometry.vbOffset.push_back(vecOffest);
+        sceneGeometry.ibOffset.push_back(idxOffset * 3);
+        sceneGeometry.indexCount.push_back(scene->mMeshes[i]->mNumFaces * 3);
+        sceneGeometry.materialIndex.push_back(scene->mMeshes[i]->mMaterialIndex);
+
         vecOffest += scene->mMeshes[i]->mNumVertices;
         idxOffset += scene->mMeshes[i]->mNumFaces;
     }
