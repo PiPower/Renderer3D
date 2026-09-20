@@ -12,9 +12,66 @@ void RenderStep(
     void* args2);
 
 
-float frontTriangle[] = { -1.0f, 1.0f, -2.0f,
-                          1.0f, 1.0f, -2.0f,
-                          -1.0f, -1.0f, -2.0f };
+struct Vertex {
+    float x, y, z;
+};
+
+static const Vertex cubeVertices[] = {
+    // Front (+Z)
+    {-1.0f, -1.0f, +1.0f},
+    {+1.0f, +1.0f, +1.0f},
+    {+1.0f, -1.0f, +1.0f},
+
+    {-1.0f, -1.0f, +1.0f},
+    {-1.0f, +1.0f, +1.0f},
+    {+1.0f, +1.0f, +1.0f},
+
+    // Back (-Z)
+    {-1.0f, -1.0f, -1.0f},
+    {+1.0f, -1.0f, -1.0f},
+    {+1.0f, +1.0f, -1.0f},
+
+    {-1.0f, -1.0f, -1.0f},
+    {+1.0f, +1.0f, -1.0f},
+    {-1.0f, +1.0f, -1.0f},
+
+    // Right (+X)
+    {+1.0f, -1.0f, -1.0f},
+    {+1.0f, +1.0f, +1.0f},
+    {+1.0f, +1.0f, -1.0f},
+
+    {+1.0f, -1.0f, -1.0f},
+    {+1.0f, -1.0f, +1.0f},
+    {+1.0f, +1.0f, +1.0f},
+
+    // Left (-X)
+    {-1.0f, -1.0f, -1.0f},
+    {-1.0f, +1.0f, +1.0f},
+    {-1.0f, -1.0f, +1.0f},
+
+    {-1.0f, -1.0f, -1.0f},
+    {-1.0f, +1.0f, -1.0f},
+    {-1.0f, +1.0f, +1.0f},
+
+    // Top (+Y)
+    {-1.0f, +1.0f, -1.0f},
+    {+1.0f, +1.0f, +1.0f},
+    {-1.0f, +1.0f, +1.0f},
+
+    {-1.0f, +1.0f, -1.0f},
+    {+1.0f, +1.0f, -1.0f},
+    {+1.0f, +1.0f, +1.0f},
+
+    // Bottom (-Y)
+    {-1.0f, -1.0f, -1.0f},
+    {-1.0f, -1.0f, +1.0f},
+    {+1.0f, -1.0f, +1.0f},
+
+    {-1.0f, -1.0f, -1.0f},
+    {+1.0f, -1.0f, +1.0f},
+    {+1.0f, -1.0f, -1.0f},
+};
+
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
@@ -35,6 +92,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
+    rg.MarkAsDisplayImage("output");
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
@@ -56,7 +114,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	rg.Compile(&renderer);
     rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
-    //rg.UploadDataToBuffer("vertex", 9 * sizeof(float), (const char*)frontTriangle, 0, 0);
+    rg.UploadDataToBuffer("vertex", 36 * sizeof(Vertex), (const char*)cubeVertices, 0, 0);
 
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
@@ -67,7 +125,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     scene.UploadObjectTransforms(objectUbo);
     RenderingData rd = scene.GetRenderingData();
 
-    Eigen::Vector3f pos { 0, 0, -3 };
+    Eigen::Vector3f pos { -4, 0, -7 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
     Camera cam(pos, lookDir, up, cameraUbo);
@@ -78,11 +136,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)
     {
+        cam.ProcessUserInput(&wnd, dt * 10);
+
         auto t1 = chrono::high_resolution_clock::now();
         rg.Render(&rd);
-        renderer.RenderFrame();
-
         auto t2 = chrono::high_resolution_clock::now();
+
         chrono::duration duration = t2 - t1;
         dt = (float)duration.count() / 1'000'000'000.0f;
         //dt = 0.001;
@@ -125,13 +184,13 @@ void RenderStep(
         {
             uint32_t currentMesh = renderItem->meshIdx[i];
             uint32_t materialIndex = rd->sceneGeometry.materialIndex[currentMesh];
-            //vkCmdDraw(cmdBuff, 3, 1, 0, 0);
-            vkCmdDrawIndexed(cmdBuff,
-                rd->sceneGeometry.indexCount[currentMesh],
-                1, 
-                rd->sceneGeometry.ibOffset[currentMesh],
-                rd->sceneGeometry.vbOffset[currentMesh],
-                0);
+            vkCmdDraw(cmdBuff, 36, 1, 0, 0);
+            //vkCmdDrawIndexed(cmdBuff,
+            //    rd->sceneGeometry.indexCount[currentMesh],
+            //    1, 
+            //    rd->sceneGeometry.ibOffset[currentMesh],
+            //    rd->sceneGeometry.vbOffset[currentMesh],
+            //    0);
         }
 
     }

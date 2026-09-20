@@ -151,6 +151,22 @@ void RenderGraph::Compile(Renderer* rendererInst)
 	}
 
 	InitializeLayouts(initLayout);
+
+	if (!displayImageRes)
+	{
+		MessageBox(NULL, L"\nThere is no image marked as display\n", NULL, MB_OK);
+		exit(-1);
+	}
+	displayImage = &execGraph.imageResources[imageLookup.find(displayImageRes)->second];
+}
+
+void RenderGraph::MarkAsDisplayImage(const std::string& name)
+{
+	displayImageRes = QueryImage(name);
+	if (displayImageRes == nullptr)
+	{
+		throw std::runtime_error("image does not exist\n");
+	}
 }
 
 void RenderGraph::FindInitialLayoutForImages(
@@ -594,6 +610,8 @@ void RenderGraph::Render(void* args)
 		submitInfo.pCommandBuffers = &execGraph.gfxCmdBuffers[i];
 		renderer->RunCommandsAndSync(submitInfo);
 	}
+
+	renderer->DisplayImageAndSync(displayImage->img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
 void RenderGraph::RunPipeline(

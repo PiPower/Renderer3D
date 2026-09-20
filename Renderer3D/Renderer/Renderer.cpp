@@ -328,6 +328,115 @@ void Renderer::RunCommandsAndSync(const VkSubmitInfo& submitInfo)
 	EXIT_ON_VK_ERROR(vkQueueWaitIdle(queues[Q_GRAPHICS]));
 }
 
+void Renderer::DisplayImageAndSync(
+	VkImage srcImage,
+	VkImageLayout layout)
+{
+	EXIT_ON_VK_ERROR(vkAcquireNextImageKHR(lgDev, swc.swapchain, UINT64_MAX, imgReady, VK_NULL_HANDLE, &imageIndex));
+
+
+	VkImageSubresourceRange subresourceRange = {};
+	subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subresourceRange.baseMipLevel = 0;
+	subresourceRange.levelCount = 1;
+	subresourceRange.baseArrayLayer = 0;
+	subresourceRange.layerCount = 1;
+
+	VkImageSubresourceLayers layers = {};
+	layers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	layers.mipLevel = 0;
+	layers.baseArrayLayer = 0;
+	layers.layerCount = 1;
+
+	VkImageCopy copyRegion = {};
+	copyRegion.srcSubresource = layers;
+	copyRegion.dstSubresource = layers;
+	copyRegion.srcOffset = { 0, 0, 0 };
+	copyRegion.dstOffset = { 0, 0, 0 };
+	copyRegion.extent = { swc.capabilities.currentExtent.width, swc.capabilities.currentExtent.height, 1 };
+
+	VkImageMemoryBarrier barriers[4];
+	barriers[0] = {};
+	barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barriers[0].srcAccessMask = 0;
+	barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barriers[0].oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	barriers[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[0].image = swc.images[imageIndex];
+	barriers[0].subresourceRange = subresourceRange;
+	
+	barriers[1] = {};
+	barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barriers[1].srcAccessMask = 0;
+	barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	barriers[1].oldLayout = layout;
+	barriers[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[1].image = srcImage;
+	barriers[1].subresourceRange = subresourceRange;
+
+
+	barriers[2] = {};
+	barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barriers[2].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barriers[2].dstAccessMask = 0;
+	barriers[2].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barriers[2].newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[2].image = swc.images[imageIndex];
+	barriers[2].subresourceRange = subresourceRange;
+
+
+	barriers[3] = {};
+	barriers[3].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barriers[3].srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	barriers[3].dstAccessMask = 0;
+	barriers[3].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	barriers[3].newLayout = layout;
+	barriers[3].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[3].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[3].image = srcImage;
+	barriers[3].subresourceRange = subresourceRange;
+
+	VkCommandBufferBeginInfo cmdBuffInfo = {};
+	cmdBuffInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBuffInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	EXIT_ON_VK_ERROR(vkResetCommandBuffer(gfxCmd, 0));
+	EXIT_ON_VK_ERROR(vkBeginCommandBuffer(gfxCmd, &cmdBuffInfo));
+
+	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 2, barriers);
+
+	vkCmdCopyImage(gfxCmd, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		swc.images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1, &copyRegion);
+
+	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 2, barriers + 2);
+
+	EXIT_ON_VK_ERROR(vkEndCommandBuffer(gfxCmd));
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &gfxCmd;
+	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submitInfo, nullptr));
+	vkQueueWaitIdle(queues[Q_GRAPHICS]);
+
+	VkPresentInfoKHR info = {};
+	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	info.swapchainCount = 1;
+	info.pSwapchains = &swc.swapchain;
+	info.pImageIndices = &imageIndex;
+	info.waitSemaphoreCount = 1;
+	info.pWaitSemaphores = &imgReady;
+	EXIT_ON_VK_ERROR(vkQueuePresentKHR(queues[Q_PRES], &info));
+	vkQueueWaitIdle(queues[Q_PRES]);
+
+}
+
 VkDescriptorSetLayout Renderer::CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info)
 {
 	VkDescriptorSetLayout setLayout;

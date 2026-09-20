@@ -3,6 +3,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <Eigen/Dense>
+
 struct Vec2
 {
 	float x, y;

@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Dense>
+#include "window.hpp"
 
 class Camera
 {
@@ -17,6 +18,10 @@ public:
 		float AspectRatio,
 		float NearZ,
 		float FarZ);
+
+	void ProcessUserInput(
+		Window* window,
+		float dt);
 private:
 	char* mmapPtr;
 	Eigen::Matrix4f proj;

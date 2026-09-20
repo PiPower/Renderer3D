@@ -66,6 +66,8 @@ public:
 
 	void Compile(Renderer* rendererInst);
 
+	void MarkAsDisplayImage(const std::string& name);
+
 	ImageResource* QueryImage(const std::string& name);
 
 	BufferResource* QueryBuffer(const std::string& name);
@@ -160,6 +162,8 @@ private:
 	std::unordered_map<std::string, size_t> shaderBind;
 	std::vector<ImageResource*> swcRelativeImages;
 
+	const ImageResource* displayImageRes;
+	const Image* displayImage;
 	Renderer* renderer;
 	ExecutionGraph execGraph;
 };

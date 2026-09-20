@@ -121,3 +121,4 @@ void Scene::UploadObjectTransforms(char* mmap)
         memcpy(mmap + ri->uboOffset, ri->transformation.data(), sizeof(float) * 4 * 4);
     }
 }
+

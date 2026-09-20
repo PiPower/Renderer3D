@@ -62,3 +62,17 @@ void Camera::UpdateProjMatrix(
 
 	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
 }
+
+void Camera::ProcessUserInput(
+	Window* window,
+	float dt)
+{
+	if (window->IsKeyPressed('W')) { pos = pos + lookDir * dt; }
+	if (window->IsKeyPressed('S')) { pos = pos - lookDir * dt; }
+	if (window->IsKeyPressed(VK_SPACE)) { pos = pos + up * dt; }
+	if (window->IsKeyPressed(VK_CONTROL)) { pos = pos - up * dt; }
+	if (window->IsKeyPressed('D')) { pos = pos + up.cross(lookDir) * dt; }
+	if (window->IsKeyPressed('A')) { pos = pos - up.cross(lookDir) * dt; }
+
+	UpdateViewMatrix();
+}
