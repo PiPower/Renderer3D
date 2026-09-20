@@ -11,68 +11,6 @@ void RenderStep(
     const RenderingPipeline* pipeline,
     void* args2);
 
-
-struct Vertex {
-    float x, y, z;
-};
-
-static const Vertex cubeVertices[] = {
-    // Front (+Z)
-    {-1.0f, -1.0f, +1.0f},
-    {+1.0f, +1.0f, +1.0f},
-    {+1.0f, -1.0f, +1.0f},
-
-    {-1.0f, -1.0f, +1.0f},
-    {-1.0f, +1.0f, +1.0f},
-    {+1.0f, +1.0f, +1.0f},
-
-    // Back (-Z)
-    {-1.0f, -1.0f, -1.0f},
-    {+1.0f, -1.0f, -1.0f},
-    {+1.0f, +1.0f, -1.0f},
-
-    {-1.0f, -1.0f, -1.0f},
-    {+1.0f, +1.0f, -1.0f},
-    {-1.0f, +1.0f, -1.0f},
-
-    // Right (+X)
-    {+1.0f, -1.0f, -1.0f},
-    {+1.0f, +1.0f, +1.0f},
-    {+1.0f, +1.0f, -1.0f},
-
-    {+1.0f, -1.0f, -1.0f},
-    {+1.0f, -1.0f, +1.0f},
-    {+1.0f, +1.0f, +1.0f},
-
-    // Left (-X)
-    {-1.0f, -1.0f, -1.0f},
-    {-1.0f, +1.0f, +1.0f},
-    {-1.0f, -1.0f, +1.0f},
-
-    {-1.0f, -1.0f, -1.0f},
-    {-1.0f, +1.0f, -1.0f},
-    {-1.0f, +1.0f, +1.0f},
-
-    // Top (+Y)
-    {-1.0f, +1.0f, -1.0f},
-    {+1.0f, +1.0f, +1.0f},
-    {-1.0f, +1.0f, +1.0f},
-
-    {-1.0f, +1.0f, -1.0f},
-    {+1.0f, +1.0f, -1.0f},
-    {+1.0f, +1.0f, +1.0f},
-
-    // Bottom (-Y)
-    {-1.0f, -1.0f, -1.0f},
-    {-1.0f, -1.0f, +1.0f},
-    {+1.0f, -1.0f, +1.0f},
-
-    {-1.0f, -1.0f, -1.0f},
-    {+1.0f, -1.0f, +1.0f},
-    {+1.0f, -1.0f, -1.0f},
-};
-
-
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
     Window wnd(1600, 900, L"yolo", L"test");
@@ -114,7 +52,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	rg.Compile(&renderer);
     rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
-    rg.UploadDataToBuffer("vertex", 36 * sizeof(Vertex), (const char*)cubeVertices, 0, 0);
 
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
@@ -125,13 +62,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     scene.UploadObjectTransforms(objectUbo);
     RenderingData rd = scene.GetRenderingData();
 
-    Eigen::Vector3f pos { -4, 0, -7 };
+    Eigen::Vector3f pos { 0, 0, -7 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
     Camera cam(pos, lookDir, up, cameraUbo);
     VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
     cam.UpdateViewMatrix();
-    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.1f, 128.0f);
+    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.001f, 30.0f);
 
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)
@@ -174,7 +111,7 @@ void RenderStep(
     uint32_t offsets[1] = { 0 };
     vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
 
-    for (size_t item = 0; item < 1; item++)
+    for (size_t item = 0; item < 2; item++)
     {
         const RenderItem* renderItem = &rd->renderItems[item];
         uint32_t dynamicOffset[1] = { renderItem->uboOffset };
@@ -184,17 +121,13 @@ void RenderStep(
         {
             uint32_t currentMesh = renderItem->meshIdx[i];
             uint32_t materialIndex = rd->sceneGeometry.materialIndex[currentMesh];
-            vkCmdDraw(cmdBuff, 36, 1, 0, 0);
-            //vkCmdDrawIndexed(cmdBuff,
-            //    rd->sceneGeometry.indexCount[currentMesh],
-            //    1, 
-            //    rd->sceneGeometry.ibOffset[currentMesh],
-            //    rd->sceneGeometry.vbOffset[currentMesh],
-            //    0);
+            vkCmdDrawIndexed(cmdBuff,
+                rd->sceneGeometry.indexCount[currentMesh],
+                1, 
+                rd->sceneGeometry.ibOffset[currentMesh],
+                rd->sceneGeometry.vbOffset[currentMesh],
+                0);
         }
 
     }
-
-
-    //vkCmdDrawIndexed(cmdBuff, 36, 1, 0, 0, 1);
 }

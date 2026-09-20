@@ -1,8 +1,10 @@
 #include "Camera.h"
+#include <DirectXMath.h>
 
 using namespace Eigen;
 
 constexpr uint64_t MATRIX_SIZE = sizeof(Eigen::Matrix4f);
+using namespace DirectX;
 
 Camera::Camera(
 	const Eigen::Vector3f& pos,
@@ -24,26 +26,24 @@ void Camera::UpdateViewMatrix()
 	Vector3f negPos = -pos;
 
 	view(0, 0) = xAxis(0);
-	view(1, 0) = xAxis(1);
-	view(2, 0) = xAxis(2);
-	view(3, 0) = xAxis.dot(negPos);
+	view(0, 1) = xAxis(1);
+	view(0, 2) = xAxis(2);
+	view(0, 3) = xAxis.dot(negPos);
 
-	view(0, 1) = yAxis(0);
+	view(1, 0) = yAxis(0);
 	view(1, 1) = yAxis(1);
-	view(2, 1) = yAxis(2);
-	view(3, 1) = yAxis.dot(negPos);
+	view(1, 2) = yAxis(2);
+	view(1, 3) = yAxis.dot(negPos);
 
-	view(0, 2) = lookDir(0);
-	view(1, 2) = lookDir(1);
+	view(2, 0) = lookDir(0);
+	view(2, 1) = lookDir(1);
 	view(2, 2) = lookDir(2);
-	view(3, 2) = lookDir.dot(negPos);
+	view(2, 3) = lookDir.dot(negPos);
 
 	view(3, 3) = 1;
 
-	view.transposeInPlace();
 	memcpy(mmapPtr, view.data(), MATRIX_SIZE);
 }
-
 void Camera::UpdateProjMatrix(
 	float FovAngleY,
 	float AspectRatio,
