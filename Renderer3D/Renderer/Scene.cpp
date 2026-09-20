@@ -48,9 +48,9 @@ Scene::Scene(std::string path)
         for (size_t j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
         {
 
-            vertices.at(vecOffest + j).x = scene->mMeshes[i]->mVertices[j].y;
-            vertices.at(vecOffest + j).y = scene->mMeshes[i]->mVertices[j].z;
-            vertices.at(vecOffest + j).z = scene->mMeshes[i]->mVertices[j].x;
+            vertices.at(vecOffest + j).x = scene->mMeshes[i]->mVertices[j].x;
+            vertices.at(vecOffest + j).y = scene->mMeshes[i]->mVertices[j].y;
+            vertices.at(vecOffest + j).z = scene->mMeshes[i]->mVertices[j].z;
 
             normals.at(vecOffest + j).x = scene->mMeshes[i]->mNormals[j].x;
             normals.at(vecOffest + j).y = scene->mMeshes[i]->mNormals[j].y;
@@ -117,7 +117,12 @@ void Scene::UploadObjectTransforms(char* mmap)
     for (size_t i = 0; i < renderItems.size(); i++)
     {
         RenderItem* ri = &renderItems[i];
-        ri->transformation.transposeInPlace();
+        //ri->transformation = Eigen::Matrix4f::Zero();
+        //ri->transformation(0, 0) = 1;
+        //ri->transformation(1, 1) = 1;
+        //ri->transformation(2, 2) = 1;
+        //ri->transformation(3, 3) = 1;
+        //ri->transformation.transposeInPlace();
         memcpy(mmap + ri->uboOffset, ri->transformation.data(), sizeof(float) * 4 * 4);
     }
 }
