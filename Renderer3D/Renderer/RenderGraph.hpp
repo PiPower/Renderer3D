@@ -73,6 +73,8 @@ public:
 
 	ShaderDesc* QueryShader(const std::string& name);
 
+	char* GetPtrToVisibleBuffer(const std::string& bufferName);
+
 	void UploadDataToBuffer(
 		const std::string& bufferName,
 		uint64_t uploadSize,

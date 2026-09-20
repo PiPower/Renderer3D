@@ -645,6 +645,22 @@ ShaderDesc* RenderGraph::QueryShader(const std::string& name)
 	return nullptr;
 }
 
+char* RenderGraph::GetPtrToVisibleBuffer(const std::string& bufferName)
+{
+	const BufferResource* buffRes = QueryBuffer(bufferName);
+	if (!buffRes)
+	{
+		throw std::runtime_error("Buffer not found\n");
+	}
+	size_t bufferId = bufferLookup.find(buffRes)->second;
+	Buffer* buff = &execGraph.bufferResources[bufferId];
+	if (!buff->mmap)
+	{
+		throw std::runtime_error("Buffer is not host vidible\n");
+	}
+	return buff->mmap;
+}
+
 void RenderGraph::UploadDataToBuffer(
 	const std::string& bufferName,
 	uint64_t uploadSize,

@@ -21,8 +21,8 @@ layout(set = 0, binding = 0) uniform Globals
 
 layout(set = 0, binding = 0) uniform  Camera
 {
-    mat4 proj;
     mat4 view;
+    mat4 proj;
 } camera;
 
 layout(set = 2, binding = 0) uniform  Object
@@ -43,9 +43,10 @@ layout(location = 3) out vec4 worldPosLightCoord;
 void main() 
 {
 
-    worldPos = obj.transform * vec4(inPosition, 1.0);
+    worldPos = vec4(inPosition, 1.0) + vec4(0, 0, 8, 0);
     worldPosLightCoord = vec4(0.5, 0.7, 0.5, 1.0);
-    faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
+    //faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
+    faceNormal = inNormal;
     texCoord = inTex;
 
     gl_Position = camera.proj * camera.view * worldPos;

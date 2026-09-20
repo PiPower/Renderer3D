@@ -2,6 +2,7 @@
 #include "Renderer/RenderGraph.hpp"
 #include <string>
 #include "Renderer/Scene.hpp"
+#include "Camera.h"
 using namespace std;
 
 void RenderStep(
@@ -52,6 +53,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
     rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
+    char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
+
+
+    Eigen::Vector3f pos { 0, 0, 0 };
+    Eigen::Vector3f lookDir{ 0, 0, 1 };
+    Eigen::Vector3f up{ 0 ,1, 0 };
+    Camera cam(pos, lookDir, up, cameraUbo);
+
+    VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
+    //float viewHeight = winRect.
+    cam.UpdateViewMatrix();
+    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.1f, 128.0f);
 
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)

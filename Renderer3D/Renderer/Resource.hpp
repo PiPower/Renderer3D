@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <stdint.h>
 #include <vector>
+#include <Eigen/Dense>
 
 enum class BindLevel
 {

@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;..\third_party\eigen;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(ExternalIncludePath)</ExternalIncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;..\third_party\assimp\build\lib\Release;C:\C++ projects\Renderer3D\third_party\assimp\build\bin\Release;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
@@ -150,6 +150,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
     <ClCompile Include="Renderer\RenderGraph.cpp" />
@@ -159,6 +160,7 @@
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="Renderer\Renderer.hpp" />
     <ClInclude Include="Renderer\RenderGraph.hpp" />
     <ClInclude Include="Renderer\RenderPass.hpp" />

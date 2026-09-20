@@ -117,6 +117,7 @@ public:
 	void ClearMouseQueue();
 	void SimpleTypeBox();
 	void RegisterResizezable(void* object, void(*func)(HWND, void*));
+	inline RECT GetWindowSize() { RECT rect; GetWindowRect(hwnd, &rect); return rect; }
 private:
 	static LRESULT CALLBACK  HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
 	LRESULT HandleMsg(UINT msg, WPARAM wParam, LPARAM lParam);
