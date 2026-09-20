@@ -2,7 +2,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-
+#include <Eigen/Dense>
 struct Vec2
 {
 	float x, y;
@@ -13,11 +13,27 @@ struct Vec3
 	float x, y, z;
 };
 
+struct RenderItem
+{
+	std::vector<size_t> meshIdx;
+	std::string name;
+	Eigen::Matrix4f transformation;
+	Eigen::Vector4i index;
+	uint32_t uboOffset;
+};
 
 class Scene
 {
 public:
 	Scene(std::string path);
+
+	void parseObjectTree(
+		aiNode* node,
+		const Eigen::Matrix4f& transform);
+
+	void UploadObjectTransforms(char* mmap);
+
+	inline size_t GetRenderItemCount() { return renderItems.size(); }
 
 	inline uint64_t GetVertexCount() { return vertexCount; }
 
@@ -46,5 +62,7 @@ private:
 	std::vector<Vec2> texCoords;
 	std::vector <uint32_t> indecies;
 	std::vector<uint32_t> materialTextureIdx;
+	std::vector<RenderItem> renderItems;
+	uint32_t uboOffset;
 };
 

@@ -43,10 +43,9 @@ layout(location = 3) out vec4 worldPosLightCoord;
 void main() 
 {
 
-    worldPos = vec4(inPosition, 1.0) + vec4(0, 0, 8, 0);
+    worldPos =  obj.transform * vec4(inPosition, 1.0);
     worldPosLightCoord = vec4(0.5, 0.7, 0.5, 1.0);
-    //faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
-    faceNormal = inNormal;
+    faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
     texCoord = inTex;
 
     gl_Position = camera.proj * camera.view * worldPos;

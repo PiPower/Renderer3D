@@ -25,7 +25,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("texcoord", scene.GetTexByteSize());
     rg.DescribeBuffer("index", scene.GetIndexByteSize());
     rg.DescribeBuffer("camera", 2 * trsfMatrixSize, true, true);
-    rg.DescribeBuffer("object_transform", 80 * trsfMatrixSize, true, true);
+    rg.DescribeBuffer("object_transform", scene.GetRenderItemCount() * trsfMatrixSize, true, true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
@@ -54,7 +54,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
     rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
     char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
-
+    char* objectUbo = rg.GetPtrToVisibleBuffer("object_transform");
+    scene.UploadObjectTransforms(objectUbo);
 
     Eigen::Vector3f pos { 0, 0, 0 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
