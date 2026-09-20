@@ -11,6 +11,11 @@ void RenderStep(
     const RenderingPipeline* pipeline,
     void* args2);
 
+
+float frontTriangle[] = { -1.0f, 1.0f, -2.0f,
+                          1.0f, 1.0f, -2.0f,
+                          -1.0f, -1.0f, -2.0f };
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
     Window wnd(1600, 900, L"yolo", L"test");
@@ -51,15 +56,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	rg.Compile(&renderer);
     rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
+    //rg.UploadDataToBuffer("vertex", 9 * sizeof(float), (const char*)frontTriangle, 0, 0);
+
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
     rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
+
     char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
     char* objectUbo = rg.GetPtrToVisibleBuffer("object_transform");
     scene.UploadObjectTransforms(objectUbo);
     RenderingData rd = scene.GetRenderingData();
 
-    Eigen::Vector3f pos { 0, 0, -10 };
+    Eigen::Vector3f pos { 0, 0, -3 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
     Camera cam(pos, lookDir, up, cameraUbo);
@@ -107,7 +115,7 @@ void RenderStep(
     uint32_t offsets[1] = { 0 };
     vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
 
-    for (size_t item = 0; item < rd->renderItems.size(); item++)
+    for (size_t item = 0; item < 1; item++)
     {
         const RenderItem* renderItem = &rd->renderItems[item];
         uint32_t dynamicOffset[1] = { renderItem->uboOffset };
@@ -117,6 +125,7 @@ void RenderStep(
         {
             uint32_t currentMesh = renderItem->meshIdx[i];
             uint32_t materialIndex = rd->sceneGeometry.materialIndex[currentMesh];
+            //vkCmdDraw(cmdBuff, 3, 1, 0, 0);
             vkCmdDrawIndexed(cmdBuff,
                 rd->sceneGeometry.indexCount[currentMesh],
                 1, 

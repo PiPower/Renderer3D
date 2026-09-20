@@ -13,8 +13,8 @@ public:
 	void UpdateViewMatrix();
 
 	void UpdateProjMatrix(
-		float ViewWidth,
-		float ViewHeight,
+		float FovAngleY,
+		float AspectRatio,
 		float NearZ,
 		float FarZ);
 private:

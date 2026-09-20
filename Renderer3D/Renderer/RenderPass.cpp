@@ -20,7 +20,7 @@ RenderPass::RenderPass(RenderGraph* rg, bool isGraphicsPass)
 	rasterInfo.depthClampEnable = VK_FALSE;
 	rasterInfo.rasterizerDiscardEnable = VK_FALSE;
 	rasterInfo.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterInfo.cullMode =  VK_CULL_MODE_BACK_BIT;
+	rasterInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterInfo.depthBiasEnable = VK_FALSE;
 	rasterInfo.depthBiasConstantFactor = 0.0f;

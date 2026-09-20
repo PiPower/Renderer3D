@@ -117,6 +117,7 @@ void Scene::UploadObjectTransforms(char* mmap)
     for (size_t i = 0; i < renderItems.size(); i++)
     {
         RenderItem* ri = &renderItems[i];
+        ri->transformation.transposeInPlace();
         memcpy(mmap + ri->uboOffset, ri->transformation.data(), sizeof(float) * 4 * 4);
     }
 }

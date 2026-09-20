@@ -39,23 +39,26 @@ void Camera::UpdateViewMatrix()
 	view(3, 2) = lookDir.dot(negPos);
 
 	view(3, 3) = 1;
+
+	view.transposeInPlace();
 	memcpy(mmapPtr, view.data(), MATRIX_SIZE);
 }
 
 void Camera::UpdateProjMatrix(
-	float ViewWidth, 
-	float ViewHeight, 
+	float FovAngleY,
+	float AspectRatio,
 	float NearZ,
 	float FarZ)
 {
-	float TwoNearZ = NearZ + NearZ;
+	float tanHalfFovy = tan(FovAngleY * 0.5f);
 	float fRange = FarZ / (FarZ - NearZ);
 
-	proj(0, 0) = TwoNearZ / ViewWidth;
-	proj(1, 1) = TwoNearZ / ViewHeight;
-	proj(2, 2) = -fRange;
+	proj(0, 0) = static_cast<float>(1) / (AspectRatio * tanHalfFovy);
+	proj(1, 1) = -static_cast<float>(1) / (tanHalfFovy);
+	proj(2, 2) = fRange;
 	proj(3, 2) = -fRange * NearZ;
 	proj(2, 3) = 1.0f;
+	proj.transposeInPlace();
 
 	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
 }
