@@ -78,8 +78,9 @@ void RenderPass::AddColorAttachment(const std::string& name)
 	img->aux_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 
-	outputImages.push_back(img);
-	imageBindings[name] = ImageClass(outputImages.size() - 1, 0, 1, 0);
+	usedImages.push_back(img);
+	imageBindings[name] = ImageClass(outputImages.size(), 0, 1, 0, 0, 0);
+	outputImages.emplace_back(usedImages.size() - 1, blendAttachmets.size(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	blendAttachmets.push_back({});
 	VkPipelineColorBlendAttachmentState* blend = &blendAttachmets.back();

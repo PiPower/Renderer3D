@@ -122,11 +122,13 @@ void RenderGraph::Compile(Renderer* rendererInst)
 	renderer = rendererInst;
 
 	AllocateResources();
+	std::vector<VkImageLayout> initLayout(execGraph.imageResources.size(), VK_IMAGE_LAYOUT_UNDEFINED);
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
 		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
 		RenderResources passResources = CreateRenderResources(&renderPasses[i]);
 		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources);
+		FindInitialLayoutForImages(&renderPasses[i], &initLayout);
 		FillDescriptorSets(&renderPasses[i], &pipeline.sets);
 
 		execGraph.pipelines.push_back(std::move(pipeline));
@@ -148,6 +150,26 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		exit(-1);
 	}
 
+
+}
+
+void RenderGraph::FindInitialLayoutForImages(
+	RenderPass* renderPass,
+	std::vector<VkImageLayout>* layouts)
+{
+	std::vector<VkImageLayout>& layoutsRef = *layouts;
+
+	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
+	{
+		const ImageResource* imgRes = renderPass->usedImages[renderPass->outputImages[i].i];
+		size_t imgIdx = imageLookup.find(imgRes)->second;
+
+		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
+		{
+			layoutsRef[imgIdx] = renderPass->outputImages[i].layout;
+		}
+
+	}
 }
 
 RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
@@ -218,7 +240,8 @@ RenderResources RenderGraph::CreateRenderResources(RenderPass* renderPass)
 
 	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
 	{
-		size_t imgIdx = imageLookup.find(renderPass->outputImages[i])->second;
+		const ImageResource* imgRes = renderPass->usedImages[renderPass->outputImages[i].i];
+		size_t imgIdx = imageLookup.find(imgRes)->second;
 		frameResources.colorImages.push_back(&execGraph.imageResources[imgIdx]);
 	}
 
@@ -294,7 +317,8 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 	PipelineRenderingDesc render = {};
 	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
 	{
-		render.outputFormats.push_back(renderPass->outputImages[i]->format);
+		size_t imageId = renderPass->outputImages[i].i;
+		render.outputFormats.push_back(renderPass->usedImages[imageId]->format);
 	}
 
 	render.info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -417,7 +441,7 @@ void RenderGraph::AllocateResources()
 		imgInfo.arrayLayers = img->layers;
 		imgInfo.samples = img->samples;
 		imgInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imgInfo.usage = img->aux_usage;
+		imgInfo.usage = img->aux_usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imgInfo.queueFamilyIndexCount = 0;
 		imgInfo.pQueueFamilyIndices = nullptr;

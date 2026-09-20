@@ -38,6 +38,7 @@ void Camera::UpdateViewMatrix()
 	view(2, 2) = lookDir(2);
 	view(3, 2) = lookDir.dot(negPos);
 
+	view(3, 3) = 1;
 	memcpy(mmapPtr, view.data(), MATRIX_SIZE);
 }
 
@@ -54,6 +55,7 @@ void Camera::UpdateProjMatrix(
 	proj(1, 1) = TwoNearZ / ViewHeight;
 	proj(2, 2) = -fRange;
 	proj(3, 2) = -fRange * NearZ;
+	proj(2, 3) = 1.0f;
 
 	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
 }

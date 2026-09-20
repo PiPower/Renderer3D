@@ -66,6 +66,9 @@ public:
 
 	void Compile(Renderer* rendererInst);
 
+	void FindInitialLayoutForImages(
+		RenderPass* renderPass,
+		std::vector<VkImageLayout>* layouts);
 
 	ImageResource* QueryImage(const std::string& name);
 

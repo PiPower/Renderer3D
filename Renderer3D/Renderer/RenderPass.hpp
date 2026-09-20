@@ -31,6 +31,20 @@ struct UniformBuffer
 	uint8_t isDynamic : 1;
 };
 
+struct ColorAttachmentImage
+{
+	size_t i;
+	size_t attachmentId;
+	VkImageLayout layout;
+};
+
+struct TextureImage
+{
+	size_t i;
+	VkImageLayout layout;
+};
+
+
 struct BufferClass
 {
 	size_t offset;
@@ -45,6 +59,8 @@ struct ImageClass
 	uint8_t isInput : 1;
 	uint8_t isOutput : 1;
 	uint8_t isTexture : 1;
+	uint8_t isDepth : 1;
+	uint8_t isStencil : 1;
 };
 
 struct RenderResources
@@ -224,9 +240,10 @@ private:
 	std::vector<UniformBuffer> uniformBuffers;
 	std::unordered_map<std::string, BufferClass> bufferBindings;
 
-	std::vector<const ImageResource*> inputImages;
-	std::vector<const ImageResource*> outputImages;
-	std::vector<const ImageResource*> textureImages;
+	std::vector<const ImageResource*> usedImages;
+	//std::vector<const ImageResource*> inputImages;
+	std::vector<ColorAttachmentImage> outputImages;
+	std::vector<TextureImage> textureImages;
 	std::unordered_map<std::string, ImageClass> imageBindings;
 
 	std::array<std::string, 2> shaderStages;
