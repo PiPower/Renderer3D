@@ -35,7 +35,7 @@ struct ColorAttachmentImage
 {
 	size_t i;
 	size_t attachmentId;
-	VkImageLayout layout;
+	VkImageLayout layout ;
 };
 
 struct TextureImage
@@ -70,6 +70,7 @@ struct RenderResources
 	std::vector<const Buffer*> indexBuffers;
 
 	std::vector<const Image*> colorImages;
+	const Image* depthImage;
 	std::vector<const Image*> textures;
 };
 
@@ -227,8 +228,6 @@ public:
 	inline RenderPass& SetStencilBackWriteMask(uint32_t mask) { depthInfo.back.writeMask = mask; return *this; }
 
 	inline RenderPass& SetStencilBackReference(uint32_t reference) { depthInfo.back.reference = reference; return *this; }
-
-
 private:
 	// resource related
 	RenderFunction renderFn;
@@ -244,6 +243,7 @@ private:
 	//std::vector<const ImageResource*> inputImages;
 	std::vector<ColorAttachmentImage> outputImages;
 	std::vector<TextureImage> textureImages;
+	ColorAttachmentImage depthImage;
 	std::unordered_map<std::string, ImageClass> imageBindings;
 
 	std::array<std::string, 2> shaderStages;

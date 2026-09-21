@@ -18,7 +18,7 @@ struct RenderingPipeline
 struct RenderInfoStruct
 {
 	VkRenderingInfo renderingInfo;
-	std::vector<VkRenderingAttachmentInfo> outputAttachments;
+	std::vector<VkRenderingAttachmentInfo> attachments;
 };
 
 struct ExecutionGraph

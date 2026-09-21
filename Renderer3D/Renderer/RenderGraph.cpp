@@ -304,6 +304,12 @@ RenderResources RenderGraph::CreateRenderResources(RenderPass* renderPass)
 		size_t imgIdx = imageLookup.find(imgRes)->second;
 		frameResources.colorImages.push_back(&execGraph.imageResources[imgIdx]);
 	}
+	if (renderPass->depthImage.layout != VK_IMAGE_LAYOUT_UNDEFINED)
+	{
+		const ImageResource* imgRes = renderPass->usedImages[renderPass->depthImage.i];
+		size_t imgIdx = imageLookup.find(imgRes)->second;
+		frameResources.depthImage = &execGraph.imageResources[imgIdx];
+	}
 
 	return frameResources;
 }
@@ -551,24 +557,13 @@ void RenderGraph::AllocateResources()
 
 RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& resources)
 {
-	renderer->GetSwapchainCapabilities().currentExtent;
 	RenderInfoStruct info = {};
-	info.outputAttachments.resize(resources.colorImages.size());
+	size_t descCount = resources.colorImages.size() + 1; // 1 for depth image if not present skip it
+	info.attachments.resize(descCount);
 
-	info.renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-	info.renderingInfo.renderArea = {
-		{0 ,0},
-		renderer->GetSwapchainCapabilities().currentExtent };
-	info.renderingInfo.layerCount = 1;
-	info.renderingInfo.viewMask = 0;
-	info.renderingInfo.colorAttachmentCount = (uint32_t)resources.colorImages.size();
-	info.renderingInfo.pColorAttachments = info.outputAttachments.data();
-	info.renderingInfo.pDepthAttachment = nullptr;
-	info.renderingInfo.pStencilAttachment = nullptr;
-
-	for (size_t i = 0; i < info.outputAttachments.size(); i++)
+	for (size_t i = 0; i < resources.colorImages.size(); i++)
 	{
-		VkRenderingAttachmentInfo* attachmentInfo = &info.outputAttachments[i];
+		VkRenderingAttachmentInfo* attachmentInfo = &info.attachments[i];
 		attachmentInfo->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		attachmentInfo->imageView = resources.colorImages[i]->imgView;
 		attachmentInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -578,8 +573,35 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& res
 		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		attachmentInfo->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachmentInfo->clearValue.color = { 0.4, 0.9, 0.9, 1.0f };
-		attachmentInfo->clearValue.depthStencil = { 1.0f, 0 };
 	}
+	if (resources.depthImage)
+	{
+		VkRenderingAttachmentInfo* depthAttInfo = &info.attachments[resources.colorImages.size()];
+		depthAttInfo->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		depthAttInfo->imageView = resources.depthImage->imgView;
+		depthAttInfo->imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+		depthAttInfo->resolveMode = VK_RESOLVE_MODE_NONE;
+		depthAttInfo->resolveImageView = VK_NULL_HANDLE;
+		depthAttInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttInfo->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttInfo->clearValue.depthStencil = { 1.0f, 0 };
+	}
+
+
+	info.renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	info.renderingInfo.renderArea = {
+		{0 ,0},
+		renderer->GetSwapchainCapabilities().currentExtent };
+	info.renderingInfo.layerCount = 1;
+	info.renderingInfo.viewMask = 0;
+	info.renderingInfo.colorAttachmentCount = (uint32_t)resources.colorImages.size();
+	info.renderingInfo.pColorAttachments = info.attachments.data();
+	if (resources.depthImage)
+	{
+		info.renderingInfo.pDepthAttachment = info.attachments.data() + resources.colorImages.size();
+	}
+	info.renderingInfo.pStencilAttachment = nullptr;
 
 	return info;
 }

@@ -4,7 +4,7 @@
 
 RenderPass::RenderPass(RenderGraph* rg, bool isGraphicsPass)
 	: 
-	rg(rg), isGraphicsPass(isGraphicsPass), renderFn(nullptr)
+	rg(rg), isGraphicsPass(isGraphicsPass), renderFn(nullptr), depthImage(0, 0, VK_IMAGE_LAYOUT_UNDEFINED)
 {
 	asmInfo = {};
 	asmInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -92,7 +92,23 @@ void RenderPass::AddColorAttachment(const std::string& name)
 
 void RenderPass::AddDepthImage(const std::string& name)
 {
+	ImageResource* img = rg->QueryImage(name);
+	if (img == nullptr)
+	{
+		throw std::runtime_error("Image does not exist\n");
+	}
+	if (imageBindings.find(name) != imageBindings.end())
+	{
+		throw std::runtime_error("Image is already bound\n");
+	}
+	img->aux_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+
 	depthInfo.depthTestEnable = VK_TRUE;
+
+	usedImages.push_back(img);
+	imageBindings[name] = ImageClass(outputImages.size(), 0, 0, 0, 1, 0);
+	depthImage = ColorAttachmentImage{ usedImages.size() - 1, blendAttachmets.size(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL};
 }
 
 void RenderPass::AddUniformBuffer(
