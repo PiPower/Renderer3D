@@ -52,7 +52,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 	rg.Compile(&renderer);
     rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
-
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
     rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
@@ -68,7 +67,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Camera cam(pos, lookDir, up, cameraUbo);
     VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
     cam.UpdateViewMatrix();
-    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.001f, 30.0f);
+    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.001f, 80.0f);
 
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)
@@ -111,7 +110,7 @@ void RenderStep(
     uint32_t offsets[1] = { 0 };
     vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
 
-    for (size_t item = 0; item < 2; item++)
+    for (size_t item = 0; item < rd->renderItems.size(); item++)
     {
         const RenderItem* renderItem = &rd->renderItems[item];
         uint32_t dynamicOffset[1] = { renderItem->uboOffset };

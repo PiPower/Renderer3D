@@ -56,9 +56,8 @@ void Camera::UpdateProjMatrix(
 	proj(0, 0) = static_cast<float>(1) / (AspectRatio * tanHalfFovy);
 	proj(1, 1) = -static_cast<float>(1) / (tanHalfFovy);
 	proj(2, 2) = fRange;
-	proj(3, 2) = -fRange * NearZ;
-	proj(2, 3) = 1.0f;
-	proj.transposeInPlace();
+	proj(2, 3) = -fRange * NearZ;
+	proj(3, 2) = 1.0f;
 
 	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
 }

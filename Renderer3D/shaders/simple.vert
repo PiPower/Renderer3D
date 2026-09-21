@@ -43,7 +43,7 @@ layout(location = 3) out vec4 worldPosLightCoord;
 void main() 
 {
 
-    worldPos = vec4(inPosition, 1);
+    worldPos = obj.transform * vec4(inPosition, 1);
     worldPosLightCoord = vec4(0.5, 0.7, 0.5, 1.0);
     faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
     texCoord = inTex;
