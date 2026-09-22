@@ -186,6 +186,17 @@ void RenderGraph::FindInitialLayoutForImages(
 		}
 
 	}
+
+	if (renderPass->depthImage.layout != VK_IMAGE_LAYOUT_UNDEFINED)
+	{
+		const ImageResource* imgRes = renderPass->usedImages[renderPass->depthImage.i];
+		size_t imgIdx = imageLookup.find(imgRes)->second;
+
+		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
+		{
+			layoutsRef[imgIdx] = renderPass->depthImage.layout;
+		}
+	}
 }
 
 void RenderGraph::InitializeLayouts(const std::vector<VkImageLayout>& initialLayouts)
@@ -392,7 +403,11 @@ PipelineRenderingDesc RenderGraph::CreatePipelineRendering(RenderPass* renderPas
 	render.info.viewMask = 0;
 	render.info.colorAttachmentCount = (uint32_t)render.outputFormats.size();
 	render.info.pColorAttachmentFormats = render.outputFormats.data();
-	render.info.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+	if (renderPass->depthImage.layout != VK_IMAGE_LAYOUT_UNDEFINED)
+	{
+		const ImageResource* imgRes = renderPass->usedImages[renderPass->depthImage.i];
+		render.info.depthAttachmentFormat = imgRes->format;
+	}
 	render.info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 	return render;
 }

@@ -108,7 +108,15 @@ void RenderPass::AddDepthImage(const std::string& name)
 
 	usedImages.push_back(img);
 	imageBindings[name] = ImageClass(outputImages.size(), 0, 0, 0, 1, 0);
-	depthImage = ColorAttachmentImage{ usedImages.size() - 1, blendAttachmets.size(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL};
+	VkImageLayout layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+	if (img->format == VK_FORMAT_D16_UNORM_S8_UINT ||
+		img->format == VK_FORMAT_D24_UNORM_S8_UINT ||
+		img->format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+	{
+		layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	}
+
+	depthImage = ColorAttachmentImage{ usedImages.size() - 1, blendAttachmets.size(), layout };
 }
 
 void RenderPass::AddUniformBuffer(
