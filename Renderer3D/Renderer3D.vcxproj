@@ -76,6 +76,10 @@
     <LibraryPath>$(VULKAN_SDK)\Lib;..\third_party\assimp\build\lib\Release;C:\C++ projects\Renderer3D\third_party\assimp\build\bin\Release;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;..\third_party\eigen;$(IncludePath)</IncludePath>
+    <LibraryPath>$(VULKAN_SDK)\Lib;..\third_party\assimp\build\lib\Release;C:\C++ projects\Renderer3D\third_party\assimp\build\bin\Release;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -139,10 +143,11 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Manifest>
