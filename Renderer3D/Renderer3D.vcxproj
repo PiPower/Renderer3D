@@ -71,13 +71,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;..\third_party\eigen;$(IncludePath)</IncludePath>
+    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;..\third_party\eigen;..\third_party\stb;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(ExternalIncludePath)</ExternalIncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;..\third_party\assimp\build\lib\Release;C:\C++ projects\Renderer3D\third_party\assimp\build\bin\Release;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;..\third_party\eigen;$(IncludePath)</IncludePath>
+    <IncludePath>$(VULKAN_SDK)\include;..\third_party\assimp\include;..\third_party\assimp\build\include;..\third_party\eigen;..\third_party\stb;$(IncludePath)</IncludePath>
     <LibraryPath>$(VULKAN_SDK)\Lib;..\third_party\assimp\build\lib\Release;C:\C++ projects\Renderer3D\third_party\assimp\build\bin\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -134,6 +134,7 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
+    <Bscmake />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -153,6 +154,7 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
+    <Bscmake />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />

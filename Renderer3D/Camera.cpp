@@ -93,16 +93,6 @@ void Camera::ProcessUserInput(
 			angleX += dt;
 		}
 
-		/*
-		XMMATRIX azimRotation = XMMatrixRotationY(angleY);
-		lookDirVec = XMVector3Transform(XMLoadFloat3(&lookDirInitial), azimRotation);
-		upVec = XMVector3Transform(XMLoadFloat3(&upInitial), azimRotation);
-
-		XMVECTOR rotAxis = XMVector3Cross(upVec, lookDirVec);
-		XMMATRIX elevRotation = XMMatrixRotationAxis(rotAxis, angleX);
-		lookDirVec = XMVector3Transform(lookDirVec, elevRotation);
-		upVec = XMVector3Transform(upVec, elevRotation);*/
-
 		// IMPORTANT: Order MATTERS !!!!
 		float angleRange = 3.14f /2.0 - 0.1;
 		angleX = std::clamp(angleX, -angleRange, angleRange);

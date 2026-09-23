@@ -13,11 +13,25 @@ void RenderStep(
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+    char pathBuffer[2048];
+    GetEnvironmentVariable(L"SCENE", (LPWSTR)pathBuffer, 1024);
+    // this is trivial utf16 to ascii conversion. it probably does not support 
+    // every possible path but screw that
+    int i = 0;
+    std::string rootPath;
+    rootPath.reserve(1024);
+    while (pathBuffer[i] != '\0')
+    {
+        rootPath += pathBuffer[i];
+        i += 2;
+    }
+
+
     Window wnd(1600, 900, L"yolo", L"test");
 	Renderer renderer(hInstance, wnd.GetWindowHWND(), 100'000'000);
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
-	Scene scene("D:\\main1_sponza\\NewSponza_Main_glTF_003.gltf");
-    
+	Scene scene(rootPath, "NewSponza_Main_glTF_003.gltf");
+    TextureDesc texDesc = scene.GetColorTextureDesc();
     uint32_t trsfMatrixSize = 16 * sizeof(float);
 
     RenderGraph rg;
@@ -29,6 +43,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("object_transform", scene.GetRenderItemCount() * trsfMatrixSize, true, true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
+    rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetMaterialCount(), VK_FORMAT_R8G8B8A8_SINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
 
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
@@ -42,8 +57,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddDepthImage("depth_image");
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
-
 	rpSimple->AddColorAttachment("output");
+    rpSimple->AddTextureImage("colorTex");
 
 	rpSimple->AddVertexShader("simple_vert");
 	rpSimple->AddFragmentShader("simple_frag");
@@ -69,7 +84,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Camera cam(pos, lookDir, up, cameraUbo);
     VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
     cam.UpdateViewMatrix();
-    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.001f, 80.0f);
+    cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.3f, 80.0f);
 
     float dt = 0.001f;
     while (wnd.ProcessMessages() == 0)

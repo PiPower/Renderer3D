@@ -1,31 +1,53 @@
 #include "Scene.hpp"
 #pragma comment (lib, "assimp-vc145-mt.lib")
 #include <Windows.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
-Scene::Scene(std::string path)
+Scene::Scene(
+    const std::string& rootPath,
+    const std::string& sceneName)
     :
-    uboOffset(0)
+    rootPath(rootPath), sceneName(sceneName), uboOffset(0), nonEmptyMaterials(0)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_MakeLeftHanded | aiProcess_FlipWindingOrder);
+    const aiScene* scene = importer.ReadFile(rootPath + sceneName, 
+                        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_MakeLeftHanded | aiProcess_FlipWindingOrder);
+
+    if (scene == nullptr)
+    {
+        throw std::runtime_error("Scene path incorrect\n");
+    }
 
     uint32_t imageArrayOffset = 0;
     for (uint32_t i = 0; i < scene->mNumMaterials; i++)
     {
         aiMaterial* processedMaterial = scene->mMaterials[i];
-        aiString str;
-        aiReturn ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
-        if (ret != aiReturn_SUCCESS)
+        aiString baseColor, normals, path;
+        aiReturn ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColor);
+        ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &normals);
+        aiString d = processedMaterial->GetName();
+        materials.emplace_back(processedMaterial->GetName().C_Str(), baseColor.C_Str(), TextureDesc{}, normals.C_Str(), nonEmptyMaterials);
+        if (materials.back().name.length() == 0)
         {
-            materialTextureIdx.push_back(0);
-        }
-        else
-        {
-            materialTextureIdx.push_back(imageArrayOffset);
-            imageArrayOffset++;
+            continue;
         }
 
+        nonEmptyMaterials++;
+
+        TextureDesc tex;
+        int ok;
+        std::string pathName = rootPath + materials.back().baseColorPath;
+        ok = stbi_info(pathName.c_str(), &tex.width, &tex.height, &tex.components);
+        materials.back().colorTex = tex;
+
+        if (tex.height != materials[0].colorTex.height ||
+            tex.width != materials[0].colorTex.width)
+        {
+            throw std::runtime_error("Textures have unequal dimensions\n");
+        }
     }
+
     for (size_t i = 0; i < scene->mNumMeshes; i++)
     {
         if (scene->mMeshes[i]->mPrimitiveTypes != aiPrimitiveType_TRIANGLE)
@@ -68,10 +90,11 @@ Scene::Scene(std::string path)
             indecies.at((idxOffset + j) * 3 + 2) = scene->mMeshes[i]->mFaces[j].mIndices[2];
         }
 
+        scene->mMeshes[i]->mName;
         sceneGeometry.vbOffset.push_back(vecOffest);
         sceneGeometry.ibOffset.push_back(idxOffset * 3);
         sceneGeometry.indexCount.push_back(scene->mMeshes[i]->mNumFaces * 3);
-        sceneGeometry.materialIndex.push_back(scene->mMeshes[i]->mMaterialIndex);
+        sceneGeometry.materialIndex.push_back(materials[scene->mMeshes[i]->mMaterialIndex].index);
 
         vecOffest += scene->mMeshes[i]->mNumVertices;
         idxOffset += scene->mMeshes[i]->mNumFaces;

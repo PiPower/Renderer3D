@@ -247,7 +247,6 @@ private:
 	std::unordered_map<std::string, ImageClass> imageBindings;
 
 	std::array<std::string, 2> shaderStages;
-
 	// pipeline description
 	VkPipelineInputAssemblyStateCreateInfo  asmInfo;
 	VkPipelineViewportStateCreateInfo vpInfo;

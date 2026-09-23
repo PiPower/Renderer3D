@@ -37,10 +37,28 @@ struct RenderingData
 	const MeshCollection& sceneGeometry;
 
 };
+
+struct TextureDesc
+{
+	int height;
+	int width;
+	int components; // if comp == 4 -> RGBA
+};
+struct Material
+{
+	std::string name;
+	std::string baseColorPath;
+	TextureDesc colorTex;
+	std::string normalsPath;
+	uint32_t index;
+};
+
 class Scene
 {
 public:
-	Scene(std::string path);
+	Scene(
+		const std::string& rootPath,
+		const std::string& sceneName);
 
 	void parseObjectTree(
 		aiNode* node,
@@ -71,7 +89,13 @@ public:
 	inline Vec2* GetTexPtr() { return texCoords.data(); }
 
 	inline uint32_t* GetIndexPtr() { return indecies.data(); }
+
+	inline uint32_t GetMaterialCount() { return nonEmptyMaterials; }
+
+	inline TextureDesc GetColorTextureDesc() { return materials[0].colorTex; }
 private:
+	std::string rootPath;
+	std::string sceneName;
 	MeshCollection sceneGeometry;
 	size_t vertexCount = 0;
 	size_t indexCount = 0;
@@ -79,8 +103,10 @@ private:
 	std::vector<Vec3> normals;
 	std::vector<Vec2> texCoords;
 	std::vector <uint32_t> indecies;
-	std::vector<uint32_t> materialTextureIdx;
+	std::vector<Material> materials;
 	std::vector<RenderItem> renderItems;
 	uint32_t uboOffset;
+	uint32_t nonEmptyMaterials;
+
 };
 
