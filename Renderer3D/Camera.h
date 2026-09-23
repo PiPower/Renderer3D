@@ -29,5 +29,8 @@ private:
 	Eigen::Vector3f lookDir;
 	Eigen::Vector3f up;
 	Eigen::Vector3f pos;
+
+	Eigen::Vector3f initLookDir;
+	Eigen::Vector3f initUp;
 };
 

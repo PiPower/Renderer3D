@@ -34,7 +34,7 @@ layout(location = 3) in vec4 worldPosLightCoord;
 layout(location = 0) out vec4 outColor;
 void main()
 {
-    outColor = vec4(1.0, 1.0, 1.0, 1.0) * abs(worldPos.z)/10;
+    outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
     vec3 norm = normalize(faceNormal);
     vec3 lightDir = normalize(globalUbo.lightPos.xyz - worldPos.xyz);

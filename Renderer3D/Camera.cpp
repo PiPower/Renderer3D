@@ -1,10 +1,9 @@
 #include "Camera.h"
-#include <DirectXMath.h>
+#include <Eigen/Geometry>
 
 using namespace Eigen;
 
 constexpr uint64_t MATRIX_SIZE = sizeof(Eigen::Matrix4f);
-using namespace DirectX;
 
 Camera::Camera(
 	const Eigen::Vector3f& pos,
@@ -12,7 +11,7 @@ Camera::Camera(
 	const Eigen::Vector3f& up,
 	char* mmapPtr)
 	:
-	mmapPtr(mmapPtr), lookDir(lookDir), up(up), pos(pos)
+	mmapPtr(mmapPtr), lookDir(lookDir), up(up), pos(pos), initLookDir(lookDir), initUp(up)
 {
 	view = Matrix4f::Zero();
 	proj = Matrix4f::Zero();
@@ -72,6 +71,48 @@ void Camera::ProcessUserInput(
 	if (window->IsKeyPressed(VK_CONTROL)) { pos = pos - up * dt; }
 	if (window->IsKeyPressed('D')) { pos = pos + up.cross(lookDir) * dt; }
 	if (window->IsKeyPressed('A')) { pos = pos - up.cross(lookDir) * dt; }
+
+	if (window->IsLeftPressed())
+	{
+		static float angleX = 0.0f, angleY = 0.0f;
+		if (window->GetMouseDeltaX() < 0)
+		{
+			angleY += dt;
+		}
+		else if (window->GetMouseDeltaX() > 0)
+		{
+			angleY += -dt;
+		}
+
+		if (window->GetMouseDeltaY() < 0)
+		{
+			angleX += -dt;
+		}
+		else if (window->GetMouseDeltaY() > 0)
+		{
+			angleX += dt;
+		}
+
+		/*
+		XMMATRIX azimRotation = XMMatrixRotationY(angleY);
+		lookDirVec = XMVector3Transform(XMLoadFloat3(&lookDirInitial), azimRotation);
+		upVec = XMVector3Transform(XMLoadFloat3(&upInitial), azimRotation);
+
+		XMVECTOR rotAxis = XMVector3Cross(upVec, lookDirVec);
+		XMMATRIX elevRotation = XMMatrixRotationAxis(rotAxis, angleX);
+		lookDirVec = XMVector3Transform(lookDirVec, elevRotation);
+		upVec = XMVector3Transform(upVec, elevRotation);*/
+
+		// IMPORTANT: Order MATTERS !!!!
+		float angleRange = 3.14f /2.0 - 0.1;
+		angleX = std::clamp(angleX, -angleRange, angleRange);
+
+		Matrix3f rotMat;
+		rotMat = AngleAxisf(-angleX, Eigen::Vector3f::UnitX()) * AngleAxisf(-angleY, Eigen::Vector3f::UnitY()); // *Quaternionf(cosf(angleY / 2), Eigen::Vector3f::UnitY());
+
+		lookDir = initLookDir.transpose() * rotMat;
+		up = initUp.transpose() * rotMat;
+	}
 
 	UpdateViewMatrix();
 }
