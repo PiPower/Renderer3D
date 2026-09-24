@@ -419,7 +419,7 @@ std::vector<VkDescriptorSetLayout> RenderGraph::CreateSetLayouts(RenderPass* ren
 	for (uint32_t i = 1; i <= static_cast<uint32_t>(BindLevel::PER_OBJECT); i++)
 	{
 		std::vector<VkDescriptorSetLayoutBinding> bindings = 
-				CreateBufferBindings(renderPass->uniformBuffers, static_cast<BindLevel>(i));
+				CreateBufferBindings(renderPass->uniformBuffers, renderPass->textureImages, static_cast<BindLevel>(i));
 
 		VkDescriptorSetLayoutCreateInfo setInfo = {};
 		setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -470,6 +470,7 @@ VkDescriptorPool RenderGraph::CreateDescriptorPool(
 
 std::vector<VkDescriptorSetLayoutBinding> RenderGraph::CreateBufferBindings(
 	const std::vector<UniformBuffer>& uniformBuffers,
+	const std::vector<TextureImage>& textures,
 	BindLevel level)
 {
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -490,6 +491,21 @@ std::vector<VkDescriptorSetLayoutBinding> RenderGraph::CreateBufferBindings(
 		bindings.push_back(setBind);
 	}
 
+	for (size_t i = 0; i < textures.size(); i++)
+	{
+		const TextureImage& texImg = textures[i];
+		if (texImg.level != level)
+		{
+			continue;
+		}
+		VkDescriptorSetLayoutBinding setBind = {};
+		setBind.binding = bindIdx++;
+		setBind.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		setBind.descriptorCount = texImg.count;
+		setBind.stageFlags = texImg.stages;
+
+		bindings.push_back(setBind);
+	}
 	return bindings;
 }
 

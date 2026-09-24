@@ -1,7 +1,6 @@
 #version 450
-#ifndef TEXTURE_COUNT
-    #define TEXTURE_COUNT 1
-#endif
+#extension GL_KHR_vulkan_glsl : enable
+
 /*
 layout(binding = 0) uniform GlobalUbo
 {
@@ -25,6 +24,13 @@ layout( push_constant ) uniform constants
     ivec4 index;
 } PushConstants;
 */
+
+layout(set = 2, binding = 0) uniform  Object
+{
+    mat4 transform;
+} obj;
+
+layout(set = 1, binding = 0) uniform sampler2DArray textures;
 
 layout(location = 0) in vec3 faceNormal;
 layout(location = 1) in vec2 texCoord; 

@@ -1,8 +1,6 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
-#ifndef LIGHT_COUNT
-    #define LIGHT_COUNT
-#endif
+
 /*
 struct Light
 {

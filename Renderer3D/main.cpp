@@ -57,10 +57,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddDepthImage("depth_image");
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
+    rpSimple->AddTextureImage("colorTex", scene.GetMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
 	rpSimple->AddColorAttachment("output");
-    rpSimple->AddTextureImage("colorTex");
 
-	rpSimple->AddVertexShader("simple_vert");
+    rpSimple->AddVertexShader("simple_vert");
 	rpSimple->AddFragmentShader("simple_frag");
     rpSimple->SetRenderFunction(RenderStep);
     //RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);

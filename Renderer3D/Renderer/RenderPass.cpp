@@ -55,10 +55,30 @@ RenderPass::RenderPass(RenderGraph* rg, bool isGraphicsPass)
 	depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 	depthInfo.depthBoundsTestEnable = VK_FALSE;
 	depthInfo.stencilTestEnable = VK_FALSE;
-};
-void RenderPass::AddTextureImage(const std::string& name)
-{
 }
+
+void RenderPass::AddTextureImage(
+	const std::string& name,
+	uint32_t imgCount,
+	BindLevel level,
+	VkShaderStageFlags stageFlags)
+{
+	ImageResource* img = rg->QueryImage(name);
+	if (img == nullptr)
+	{
+		throw std::runtime_error("Image does not exist\n");
+	}
+	if (imageBindings.find(name) != imageBindings.end())
+	{
+		throw std::runtime_error("Image is already bound\n");
+	}
+
+	img->aux_usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	usedImages.push_back(img);
+	imageBindings[name] = ImageClass(textureImages.size(), 0, 0, 1, 0, 0);
+	textureImages.emplace_back(usedImages.size() - 1, imgCount, level, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, stageFlags);
+}
+
 
 void RenderPass::AddInputImage(const std::string& name)
 {

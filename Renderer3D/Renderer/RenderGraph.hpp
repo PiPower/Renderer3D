@@ -125,6 +125,7 @@ private:
 
 	std::vector<VkDescriptorSetLayoutBinding> CreateBufferBindings(
 		const std::vector<UniformBuffer>& uniformBuffers,
+		const std::vector<TextureImage>& textures,
 		BindLevel level);
 
 	void AllocateResources();

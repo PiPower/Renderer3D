@@ -41,7 +41,10 @@ struct ColorAttachmentImage
 struct TextureImage
 {
 	size_t i;
+	uint32_t count;
+	BindLevel level;
 	VkImageLayout layout;
+	VkShaderStageFlags stages;
 };
 
 
@@ -91,7 +94,11 @@ private:
 public:
 	RenderPass(RenderGraph* rg, bool isGraphicsPass);
 
-	void AddTextureImage(const std::string& name);
+	void AddTextureImage(
+		const std::string& name,
+		uint32_t imgCount,
+		BindLevel level,
+		VkShaderStageFlags stageFlags);
 
 	void AddInputImage(const std::string& name);
 
