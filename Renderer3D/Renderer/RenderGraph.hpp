@@ -167,4 +167,6 @@ private:
 	const Image* displayImage;
 	Renderer* renderer;
 	ExecutionGraph execGraph;
+	// temporary solution
+	VkSampler sampler2D;
 };

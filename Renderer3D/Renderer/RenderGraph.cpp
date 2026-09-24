@@ -95,8 +95,7 @@ static VkImageType getVkImageType(VkImageViewType viewType) {
 RenderGraph::RenderGraph()
 	:
 	renderer(nullptr)
-{
-}
+{}
 
 RenderPass* RenderGraph::CreateRenderPass(
 	const std::string& name,
@@ -196,6 +195,18 @@ void RenderGraph::FindInitialLayoutForImages(
 		{
 			layoutsRef[imgIdx] = renderPass->depthImage.layout;
 		}
+	}
+
+	for (size_t i = 0; i < renderPass->textureImages.size(); i++)
+	{
+		const ImageResource* imgRes = renderPass->usedImages[renderPass->textureImages[i].i];
+		size_t imgIdx = imageLookup.find(imgRes)->second;
+
+		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
+		{
+			layoutsRef[imgIdx] = renderPass->textureImages[i].layout;
+		}
+
 	}
 }
 
@@ -435,7 +446,7 @@ VkDescriptorPool RenderGraph::CreateDescriptorPool(
 	const std::vector<VkDescriptorSetLayout>& setLayouts)
 {
 	VkDescriptorPool pool;
-	std::array<VkDescriptorPoolSize, 2> poolSizes;
+	std::array<VkDescriptorPoolSize, 3> poolSizes;
 	uint32_t unifrom = 0, uniformDynamic = 0;
 	for (size_t i = 0; i < renderPass->uniformBuffers.size(); i++)
 	{
@@ -449,6 +460,7 @@ VkDescriptorPool RenderGraph::CreateDescriptorPool(
 		}
 	}
 
+
 	poolSizes[0] = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = unifrom;
@@ -458,10 +470,14 @@ VkDescriptorPool RenderGraph::CreateDescriptorPool(
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	poolSizes[1].descriptorCount = uniformDynamic;
 
+	poolSizes[2] = {};
+	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	poolSizes[2].descriptorCount = (uint32_t)renderPass->textureImages.size();
+
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.maxSets = 3;
-	poolInfo.poolSizeCount = 2;
+	poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
 	poolInfo.pPoolSizes = poolSizes.data();
 
 	EXIT_ON_VK_ERROR(vkCreateDescriptorPool(renderer->GetDevice(), &poolInfo, nullptr, &pool));
@@ -500,8 +516,8 @@ std::vector<VkDescriptorSetLayoutBinding> RenderGraph::CreateBufferBindings(
 		}
 		VkDescriptorSetLayoutBinding setBind = {};
 		setBind.binding = bindIdx++;
-		setBind.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		setBind.descriptorCount = texImg.count;
+		setBind.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		setBind.descriptorCount = 1;
 		setBind.stageFlags = texImg.stages;
 
 		bindings.push_back(setBind);
@@ -584,6 +600,24 @@ void RenderGraph::AllocateResources()
 		Buffer buffRes = renderer->AllocateBuffer(buffInfo, properties);
 		execGraph.bufferResources.push_back(buffRes);
 	}
+
+	VkSamplerCreateInfo samplerInfo = {};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_NEAREST;
+	samplerInfo.minFilter = VK_FILTER_NEAREST;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.anisotropyEnable = VK_FALSE;
+	samplerInfo.maxAnisotropy = 0;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+	EXIT_ON_VK_ERROR(vkCreateSampler(renderer->GetDevice(), &samplerInfo, nullptr, &sampler2D));
+
 }
 
 RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& resources)
@@ -695,31 +729,55 @@ void RenderGraph::FillDescriptorSets(
 	RenderPass* renderPass, 
 	std::vector<VkDescriptorSet>* sets)
 {
-	size_t writeSetCount = renderPass->uniformBuffers.size();
+	size_t writeSetCount = renderPass->uniformBuffers.size() + renderPass->textureImages.size() ;
 	std::vector<VkWriteDescriptorSet> writeSets(writeSetCount);
-	std::vector<VkDescriptorBufferInfo> descBuffInfos(writeSetCount);
+	std::vector<VkDescriptorBufferInfo> descBuffInfos(renderPass->uniformBuffers.size());
+	std::vector<VkDescriptorImageInfo> imgInfos(renderPass->textureImages.size());
+
 	uint32_t perPassBind = 0, perMaterialBind = 0, perObjBind = 0;
 
 	for (size_t i = 0; i < writeSets.size(); i++)
 	{
-		const BufferResource* buffResource = renderPass->usedBuffers[renderPass->uniformBuffers[i].i];
-		size_t bufferIndex = bufferLookup[buffResource];
-		
-		VkDescriptorBufferInfo* buffInfo = &descBuffInfos[i];
-		*buffInfo = {};
-		buffInfo->buffer = execGraph.bufferResources[bufferIndex].buff;
-		buffInfo->offset = 0;
-		buffInfo->range = renderPass->uniformBuffers[i].size;
-
 		VkWriteDescriptorSet* writeSet = &writeSets[i];
 		*writeSet = {};
 		writeSet->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeSet->dstArrayElement = 0;
-		writeSet->descriptorCount = 1;
-		writeSet->descriptorType = renderPass->uniformBuffers[i].isDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeSet->pBufferInfo = buffInfo;
+		BindLevel level;
+		if (i < renderPass->uniformBuffers.size())
+		{
+			const BufferResource* buffResource = renderPass->usedBuffers[renderPass->uniformBuffers[i].i];
+			size_t bufferIndex = bufferLookup[buffResource];
 
-		switch (renderPass->uniformBuffers[i].level)
+			VkDescriptorBufferInfo* buffInfo = &descBuffInfos[i];
+			*buffInfo = {};
+			buffInfo->buffer = execGraph.bufferResources[bufferIndex].buff;
+			buffInfo->offset = 0;
+			buffInfo->range = renderPass->uniformBuffers[i].size;
+
+			writeSet->descriptorCount = 1;
+			writeSet->descriptorType = renderPass->uniformBuffers[i].isDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			writeSet->pBufferInfo = buffInfo;
+			level = renderPass->uniformBuffers[i].level;
+		}
+		else
+		{
+			size_t imgI = i - renderPass->uniformBuffers.size();
+			const ImageResource* imgResource = renderPass->usedImages[renderPass->textureImages[imgI].i];
+			size_t imgIndex = imageLookup[imgResource];
+
+			VkDescriptorImageInfo* imgInfo = &imgInfos[imgI];
+			*imgInfo = {};
+			imgInfo->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imgInfo->imageView = execGraph.imageResources[imgIndex].imgView;
+			imgInfo->sampler = sampler2D;
+
+			writeSet->descriptorCount = 1;
+			writeSet->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeSet->pImageInfo = imgInfo;
+			level = renderPass->textureImages[imgI].level;
+		}
+
+		switch (level)
 		{
 		case BindLevel::PER_PASS: 
 			writeSet->dstSet = (*sets)[0];

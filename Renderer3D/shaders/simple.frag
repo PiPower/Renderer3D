@@ -40,6 +40,7 @@ layout(location = 3) in vec4 worldPosLightCoord;
 layout(location = 0) out vec4 outColor;
 void main()
 {
+    vec4 col = texture(textures, vec3(0.0, 0.0, 1.0));
     outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
     vec3 norm = normalize(faceNormal);
