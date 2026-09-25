@@ -306,7 +306,7 @@ void Renderer::UploadStagingToImage(
 	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, barriers);
 
-	//vkCmdCopyBuffer(gfxCmd, src->buff, dst->buff, 1, &copy);
+	vkCmdCopyBufferToImage(gfxCmd, stagingBuffer.buff, img->img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, pRegions);
 
 	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, barriers + 1);

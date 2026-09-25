@@ -29,7 +29,7 @@ struct MeshCollection
 	std::vector<uint32_t> vbOffset;
 	std::vector<uint32_t> ibOffset;
 	std::vector<uint32_t> indexCount;
-	std::vector<uint32_t> materialIndex;
+	std::vector<uint32_t> colorTexIndex;
 };
 
 struct RenderingData
@@ -51,7 +51,7 @@ struct Material
 	std::string baseColorPath;
 	TextureDesc colorTex;
 	std::string normalsPath;
-	uint32_t index;
+	uint32_t colorIndex; // if index == UIN32_MAX then material has no color 
 };
 
 class Scene
@@ -95,7 +95,7 @@ public:
 
 	inline uint32_t* GetIndexPtr() { return indecies.data(); }
 
-	inline uint32_t GetMaterialCount() { return nonEmptyMaterials; }
+	inline uint32_t GetColorMaterialCount() { return colorMaterials; }
 
 	inline TextureDesc GetColorTextureDesc() { return materials[0].colorTex; }
 private:
@@ -111,7 +111,7 @@ private:
 	std::vector<Material> materials;
 	std::vector<RenderItem> renderItems;
 	uint32_t uboOffset;
-	uint32_t nonEmptyMaterials;
+	uint32_t colorMaterials;
 
 };
 

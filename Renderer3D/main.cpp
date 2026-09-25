@@ -26,13 +26,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         i += 2;
     }
 
-
     Window wnd(1600, 900, L"yolo", L"test");
 	Renderer renderer(hInstance, wnd.GetWindowHWND(), 1'000'000'000);
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
 	Scene scene(rootPath, "NewSponza_Main_glTF_003.gltf");
     TextureDesc texDesc = scene.GetColorTextureDesc();
     uint32_t trsfMatrixSize = 16 * sizeof(float);
+
 
     RenderGraph rg;
     rg.DescribeBuffer("vertex", scene.GetVertexByteSize());
@@ -43,7 +43,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("object_transform", scene.GetRenderItemCount() * trsfMatrixSize, true, true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
-    rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetColorMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
 
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
@@ -57,7 +57,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddDepthImage("depth_image");
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
-    rpSimple->AddTextureImage("colorTex", scene.GetMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
+    rpSimple->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
 	rpSimple->AddColorAttachment("output");
 
     rpSimple->AddVertexShader("simple_vert");
@@ -137,7 +137,7 @@ void RenderStep(
         for (size_t i = 0; i < renderItem->meshIdx.size(); i++)
         {
             uint32_t currentMesh = renderItem->meshIdx[i];
-            uint32_t materialIndex = rd->sceneGeometry.materialIndex[currentMesh];
+            uint32_t materialIndex = rd->sceneGeometry.colorTexIndex[currentMesh];
             vkCmdDrawIndexed(cmdBuff,
                 rd->sceneGeometry.indexCount[currentMesh],
                 1, 

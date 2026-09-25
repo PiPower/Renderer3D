@@ -4,7 +4,7 @@
 #include <thread>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
+#undef max
 
 static void imgLoadThread(
     size_t i,
@@ -31,7 +31,7 @@ Scene::Scene(
     const std::string& rootPath,
     const std::string& sceneName)
     :
-    rootPath(rootPath), sceneName(sceneName), uboOffset(0), nonEmptyMaterials(0)
+    rootPath(rootPath), sceneName(sceneName), uboOffset(0), colorMaterials(0)
 {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(rootPath + sceneName, 
@@ -50,13 +50,17 @@ Scene::Scene(
         aiReturn ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColor);
         ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &normals);
         aiString d = processedMaterial->GetName();
-        materials.emplace_back(processedMaterial->GetName().C_Str(), baseColor.C_Str(), TextureDesc{}, normals.C_Str(), nonEmptyMaterials);
+
+        uint32_t materialColorIdx = std::numeric_limits<uint32_t>::max();
+        if (baseColor.length != 0)
+        {
+            materialColorIdx = colorMaterials++;
+        }
+        materials.emplace_back(processedMaterial->GetName().C_Str(), baseColor.C_Str(), TextureDesc{}, normals.C_Str(), materialColorIdx);
         if (materials.back().name.length() == 0)
         {
             continue;
         }
-
-        nonEmptyMaterials++;
 
         TextureDesc tex;
         int ok;
@@ -117,7 +121,7 @@ Scene::Scene(
         sceneGeometry.vbOffset.push_back(vecOffest);
         sceneGeometry.ibOffset.push_back(idxOffset * 3);
         sceneGeometry.indexCount.push_back(scene->mMeshes[i]->mNumFaces * 3);
-        sceneGeometry.materialIndex.push_back(materials[scene->mMeshes[i]->mMaterialIndex].index);
+        sceneGeometry.colorTexIndex.push_back(materials[scene->mMeshes[i]->mMaterialIndex].colorIndex);
 
         vecOffest += scene->mMeshes[i]->mNumVertices;
         idxOffset += scene->mMeshes[i]->mNumFaces;
@@ -173,18 +177,24 @@ void Scene::UploadTextureData(
     }
     uint32_t imgCount = 0;
     size_t currMaterial = 0;
-    while (currMaterial < materials.size())
+    while (true)
     {
+        uint32_t loadedImages = 0;
         {
-        std::vector<std::jthread> threadPool;
-        for (size_t i = 0; i < imgsPerIteraiton && currMaterial < materials.size(); i++, currMaterial++)
-        {
-            if (materials[currMaterial].baseColorPath != "")
+            std::vector<std::jthread> threadPool;
+            while (loadedImages < imgsPerIteraiton && 
+                   currMaterial < materials.size())
             {
-                threadPool.emplace_back(imgLoadThread, currMaterial, &materials, rootPath, stagingPtr + imgCount * imgSize, imgSize);
-                imgCount++;
+                if (materials[currMaterial].baseColorPath == "")
+                {
+                    currMaterial++;
+                    continue;
+                }
+
+                threadPool.emplace_back(imgLoadThread, currMaterial, &materials, rootPath, stagingPtr + loadedImages * imgSize, imgSize);
+                loadedImages++;
+                currMaterial++;
             }
-        }
         }
         VkBufferImageCopy copyRegion;
         copyRegion.bufferOffset = 0;
@@ -192,13 +202,17 @@ void Scene::UploadTextureData(
         copyRegion.bufferImageHeight = 0;
         copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = imgsPerIteraiton;
+        copyRegion.imageSubresource.baseArrayLayer = imgCount;
+        copyRegion.imageSubresource.layerCount = loadedImages;
         copyRegion.imageOffset = { 0, 0, 0 };
         copyRegion.imageExtent = { (uint32_t)materials[0].colorTex.width, (uint32_t)materials[0].colorTex.width, 1 };
         renderer->UploadStagingToImage(imageResource, 1, &copyRegion);
-        int x = 2;
 
+        imgCount += loadedImages;
+        if (currMaterial == materials.size())
+        {
+            break;
+        }
     }
 
 
