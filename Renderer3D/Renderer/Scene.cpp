@@ -6,6 +6,8 @@
 #include <stb_image.h>
 #undef max
 
+constexpr uint32_t UBO_SIZE = sizeof(float) * 4 * 4;
+
 static void imgLoadThread(
     size_t i,
     std::vector<Material>* materials,
@@ -152,7 +154,7 @@ void Scene::parseObjectTree(
         obj.index = Eigen::Vector4i::Zero();
         obj.name = node->mName.C_Str();
         obj.uboOffset = uboOffset;
-        uboOffset += sizeof(float) * 4 * 4;
+        uboOffset += UBO_SIZE;
 
         renderItems.push_back(std::move(obj));
     }
@@ -229,7 +231,7 @@ void Scene::UploadObjectTransforms(char* mmap)
         //ri->transformation(2, 2) = 1;
         //ri->transformation(3, 3) = 1;
         //ri->transformation.transposeInPlace();
-        memcpy(mmap + ri->uboOffset, ri->transformation.data(), sizeof(float) * 4 * 4);
+        memcpy(mmap + ri->uboOffset, ri->transformation.data(), UBO_SIZE);
     }
 }
 

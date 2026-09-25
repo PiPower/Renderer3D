@@ -130,6 +130,11 @@ public:
 		const std::string& shaderName,
 		const std::vector<std::string>& buffers);
 
+	void AddPushConstant(
+		VkShaderStageFlags shaderStages,
+		uint32_t offset,
+		uint32_t size);
+
 	inline void SetRenderFunction(RenderFunction rn) { renderFn = rn; }
 //  rendering pipeline settings
 	inline RenderPass& SetTopology(VkPrimitiveTopology topology) { asmInfo.topology = topology; return *this; }
@@ -261,6 +266,7 @@ private:
 	VkPipelineMultisampleStateCreateInfo multisampling;
 	VkPipelineColorBlendStateCreateInfo colorBlending;
 	VkPipelineDepthStencilStateCreateInfo depthInfo;
+	std::vector<VkPushConstantRange> pushConstants;
 	// pipeline description related data
 	std::vector<VkPipelineColorBlendAttachmentState> blendAttachmets;
 };

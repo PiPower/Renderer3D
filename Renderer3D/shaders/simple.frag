@@ -1,34 +1,12 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
-/*
-layout(binding = 0) uniform GlobalUbo
-{
-    mat4 view;
-    mat4 proj;
-    vec4 lightPos;
-    vec4 lightCol;
-} globalUbo;
-
-layout(binding = 2) uniform  PerObjUbo
-{
-    mat4 model;
-    ivec4 indexVec;
-} localUbo;
-
-layout(binding = 1) uniform sampler2D texSampler[TEXTURE_COUNT];
-
 //push constants block
 layout( push_constant ) uniform constants
 {
-    ivec4 index;
+    int indecies;
 } PushConstants;
-*/
 
-layout(set = 2, binding = 0) uniform  Object
-{
-    mat4 transform;
-} obj;
 
 layout(set = 1, binding = 0) uniform sampler2DArray textures;
 
@@ -40,8 +18,8 @@ layout(location = 3) in vec4 worldPosLightCoord;
 layout(location = 0) out vec4 outColor;
 void main()
 {
-    vec4 col = texture(textures, vec3(0.0, 0.0, 1.0));
-    outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
+    outColor = texture(textures, vec3(texCoord.x, texCoord.y, PushConstants.indecies.x) );
+    //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
     vec3 norm = normalize(faceNormal);
     vec3 lightDir = normalize(globalUbo.lightPos.xyz - worldPos.xyz);

@@ -96,7 +96,9 @@ public:
 
 	VkDescriptorSetLayout CreateDescriptorSet(const VkDescriptorSetLayoutCreateInfo* info);
 
-	VkPipelineLayout CreatePipelineLayout(const std::vector< VkDescriptorSetLayout>& sets);
+	VkPipelineLayout CreatePipelineLayout(
+		const std::vector< VkDescriptorSetLayout>& sets,
+		const std::vector<VkPushConstantRange>& pushConstants);
 
 	VkCommandPool CreateGraphicsCommandPool();
 

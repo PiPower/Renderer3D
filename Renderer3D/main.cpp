@@ -3,6 +3,7 @@
 #include <string>
 #include "Renderer/Scene.hpp"
 #include "Camera.h"
+#undef max
 using namespace std;
 
 void RenderStep(
@@ -63,6 +64,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddVertexShader("simple_vert");
 	rpSimple->AddFragmentShader("simple_frag");
     rpSimple->SetRenderFunction(RenderStep);
+    rpSimple->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
     //RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
 	//rpSimple->AddTextureImage("skybox");
     //rpSimple->AddOutputImage("output");
@@ -138,6 +140,11 @@ void RenderStep(
         {
             uint32_t currentMesh = renderItem->meshIdx[i];
             uint32_t materialIndex = rd->sceneGeometry.colorTexIndex[currentMesh];
+            if (materialIndex == std::numeric_limits<uint32_t>::max())
+            {
+                continue;
+            }
+            vkCmdPushConstants(cmdBuff, pipeline->layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4, &materialIndex);
             vkCmdDrawIndexed(cmdBuff,
                 rd->sceneGeometry.indexCount[currentMesh],
                 1, 

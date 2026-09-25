@@ -261,7 +261,7 @@ RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
 	RenderingPipeline pipelineOut = {};
 	pipelineOut.renderFn = renderPass->renderFn;
 	pipelineOut.setLayouts = CreateSetLayouts(renderPass);
-	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.setLayouts);
+	pipelineOut.layout = renderer->CreatePipelineLayout(pipelineOut.setLayouts, renderPass->pushConstants);
 	pipelineOut.descPool = CreateDescriptorPool(renderPass, pipelineOut.setLayouts);
 
 	VkDescriptorSetAllocateInfo descAlloc = {};
@@ -607,9 +607,9 @@ void RenderGraph::AllocateResources()
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	samplerInfo.magFilter = VK_FILTER_NEAREST;
 	samplerInfo.minFilter = VK_FILTER_NEAREST;
-	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.anisotropyEnable = VK_FALSE;
 	samplerInfo.maxAnisotropy = 0;
 	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;

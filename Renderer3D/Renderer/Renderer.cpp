@@ -498,13 +498,17 @@ VkDescriptorSetLayout Renderer::CreateDescriptorSet(const VkDescriptorSetLayoutC
 	return setLayout;
 }
 
-VkPipelineLayout Renderer::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& sets)
+VkPipelineLayout Renderer::CreatePipelineLayout(
+	const std::vector<VkDescriptorSetLayout>& sets,
+	const std::vector<VkPushConstantRange>& pushConstants)
 {
 	VkPipelineLayout layout;
 	VkPipelineLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.setLayoutCount = (uint32_t)sets.size();
 	layoutInfo.pSetLayouts = sets.data();
+	layoutInfo.pushConstantRangeCount = (uint32_t)pushConstants.size();
+	layoutInfo.pPushConstantRanges = pushConstants.data();
 	EXIT_ON_VK_ERROR(vkCreatePipelineLayout(lgDev, &layoutInfo, nullptr, &layout));
 	
 	return layout;

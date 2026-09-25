@@ -257,6 +257,19 @@ void RenderPass::BindResourceToShader(
 {
 }
 
+void RenderPass::AddPushConstant(
+	VkShaderStageFlags shaderStages,
+	uint32_t offset, 
+	uint32_t size)
+{
+	VkPushConstantRange range = {};
+	range.stageFlags = shaderStages;
+	range.offset = offset;
+	range.size = size;
+
+	pushConstants.push_back(range);
+}
+
 void RenderPass::SetBlendEnable(size_t attachmentIdx, VkBool32 enable)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
