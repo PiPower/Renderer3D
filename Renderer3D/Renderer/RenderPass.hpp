@@ -183,21 +183,21 @@ public:
 
 	inline RenderPass& SetBlendConstant3(float value) { colorBlending.blendConstants[3] = value; return *this; }
 
-	void SetBlendEnable(size_t attachmentIdx, VkBool32 enable);
+	RenderPass& SetBlendEnable(size_t attachmentIdx, VkBool32 enable);
 
-	void SetColorWriteMask(size_t attachmentIdx, VkColorComponentFlags mask);
+	RenderPass& SetColorWriteMask(size_t attachmentIdx, VkColorComponentFlags mask);
 
-	void SetSrcColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
+	RenderPass& SetSrcColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
 
-	void SetDstColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
+	RenderPass& SetDstColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
 
-	void SetColorBlendOp(size_t attachmentIdx, VkBlendOp op);
+	RenderPass& SetColorBlendOp(size_t attachmentIdx, VkBlendOp op);
 
-	void SetSrcAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
+	RenderPass& SetSrcAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
 
-	void SetDstAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
+	RenderPass& SetDstAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor);
 
-	void SetAlphaBlendOp(size_t attachmentIdx, VkBlendOp op);
+	RenderPass& SetAlphaBlendOp(size_t attachmentIdx, VkBlendOp op);
 
 	inline RenderPass& SetDepthWriteEnable(VkBool32 enable) { depthInfo.depthWriteEnable = enable; return *this; }
 

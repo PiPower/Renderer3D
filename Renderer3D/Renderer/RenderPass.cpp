@@ -270,66 +270,74 @@ void RenderPass::AddPushConstant(
 	pushConstants.push_back(range);
 }
 
-void RenderPass::SetBlendEnable(size_t attachmentIdx, VkBool32 enable)
+RenderPass& RenderPass::SetBlendEnable(size_t attachmentIdx, VkBool32 enable)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].blendEnable = enable;
+	return *this;
 }
 
-void RenderPass::SetColorWriteMask(size_t attachmentIdx, VkColorComponentFlags mask)
+RenderPass& RenderPass::SetColorWriteMask(size_t attachmentIdx, VkColorComponentFlags mask)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].colorWriteMask = mask;
+	return *this;
 }
 
-void RenderPass::SetSrcColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
+RenderPass& RenderPass::SetSrcColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].srcColorBlendFactor = factor;
+	return *this;
 }
 
-void RenderPass::SetDstColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
+RenderPass& RenderPass::SetDstColorBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].dstColorBlendFactor = factor;
+	return *this;
 }
 
-void RenderPass::SetColorBlendOp(size_t attachmentIdx, VkBlendOp op)
+RenderPass& RenderPass::SetColorBlendOp(size_t attachmentIdx, VkBlendOp op)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].colorBlendOp = op;
+	return *this;
 }
 
-void RenderPass::SetSrcAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
+RenderPass& RenderPass::SetSrcAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].srcAlphaBlendFactor = factor;
+	return *this;
 }
 
-void RenderPass::SetDstAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
+RenderPass& RenderPass::SetDstAlphaBlendFactor(size_t attachmentIdx, VkBlendFactor factor)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].dstAlphaBlendFactor = factor;
+	return *this;
 }
 
-void RenderPass::SetAlphaBlendOp(size_t attachmentIdx, VkBlendOp op)
+RenderPass& RenderPass::SetAlphaBlendOp(size_t attachmentIdx, VkBlendOp op)
 {
 	if (blendAttachmets.size() <= attachmentIdx)
 		throw std::runtime_error("Attachment with specified attachmentIdx does not exist\n");
 
 	blendAttachmets[attachmentIdx].alphaBlendOp = op;
+	return *this;
 }

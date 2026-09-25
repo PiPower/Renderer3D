@@ -65,6 +65,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	rpSimple->AddFragmentShader("simple_frag");
     rpSimple->SetRenderFunction(RenderStep);
     rpSimple->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
+    rpSimple->SetBlendEnable(0, VK_TRUE).SetSrcColorBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA);
+    rpSimple->SetDstColorBlendFactor(0, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA).SetColorBlendOp(0, VK_BLEND_OP_ADD);
+    rpSimple->SetSrcAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA).SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA);
+    rpSimple->SetAlphaBlendOp(0, VK_BLEND_OP_ADD);
     //RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
 	//rpSimple->AddTextureImage("skybox");
     //rpSimple->AddOutputImage("output");
