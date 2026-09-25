@@ -230,6 +230,8 @@ void RenderGraph::InitializeLayouts(const std::vector<VkImageLayout>& initialLay
 		barrier->subresourceRange.levelCount = 1;
 		barrier->subresourceRange.baseArrayLayer = 0;
 		barrier->subresourceRange.layerCount = imgResource[i]->layers;
+
+		execGraph.imageResources[i].currLayout = initialLayouts[i];
 	}
 
 	VkCommandBuffer cmdBuff = execGraph.gfxCmdBuffers[0];
@@ -699,6 +701,18 @@ void RenderGraph::Render(void* args)
 	}
 
 	renderer->DisplayImageAndSync(displayImage->img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+}
+
+Image* RenderGraph::GetImage(const std::string& name)
+{
+	ImageResource* img = QueryImage(name);
+	if (img == nullptr)
+	{
+		throw std::runtime_error("Image does not exist\n");
+	}
+
+	size_t imageIdx = imageLookup.find(img)->second;
+	return &execGraph.imageResources[imageIdx];
 }
 
 void RenderGraph::RunPipeline(

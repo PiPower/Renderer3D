@@ -28,7 +28,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 
     Window wnd(1600, 900, L"yolo", L"test");
-	Renderer renderer(hInstance, wnd.GetWindowHWND(), 100'000'000);
+	Renderer renderer(hInstance, wnd.GetWindowHWND(), 1'000'000'000);
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
 	Scene scene(rootPath, "NewSponza_Main_glTF_003.gltf");
     TextureDesc texDesc = scene.GetColorTextureDesc();
@@ -76,6 +76,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
     char* objectUbo = rg.GetPtrToVisibleBuffer("object_transform");
     scene.UploadObjectTransforms(objectUbo);
+    scene.UploadTextureData(&renderer, rg.GetImage("colorTex"));
     RenderingData rd = scene.GetRenderingData();
 
     Eigen::Vector3f pos { 0, 0, -7 };

@@ -242,7 +242,8 @@ Image Renderer::AllocateImage(
 	EXIT_ON_VK_ERROR(vkBindImageMemory(lgDev, out.img, out.mem, 0));
 	info.image = out.img;
 	EXIT_ON_VK_ERROR(vkCreateImageView(lgDev, &info, nullptr, &out.imgView));
-
+	out.range = viewInfo.subresourceRange;
+	out.currLayout = imgInfo.initialLayout;
 	return out;
 }
 
@@ -265,6 +266,59 @@ Buffer Renderer::AllocateBuffer(
 		EXIT_ON_VK_ERROR(vkMapMemory(lgDev, out.mem, 0, out.buffInfo.size, 0, (void**) & out.mmap));
 	}
 	return out;
+}
+
+void Renderer::UploadStagingToImage(
+	Image* img,
+	uint32_t regionCount, 
+	const VkBufferImageCopy* pRegions)
+{
+	VkImageMemoryBarrier barriers[2];
+	barriers[0] = {};
+	barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barriers[0].srcAccessMask = 0;
+	barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barriers[0].oldLayout = img->currLayout;
+	barriers[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[0].image = img->img;
+	barriers[0].subresourceRange = img->range;
+
+	barriers[1] = {};
+	barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barriers[1].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barriers[1].dstAccessMask = 0;
+	barriers[1].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barriers[1].newLayout = img->currLayout;
+	barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barriers[1].image = img->img;
+	barriers[1].subresourceRange = img->range;
+
+	VkCommandBufferBeginInfo cmdInfo = { };
+	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	EXIT_ON_VK_ERROR(vkResetCommandBuffer(gfxCmd, 0));
+	EXIT_ON_VK_ERROR(vkBeginCommandBuffer(gfxCmd, &cmdInfo));
+
+	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, barriers);
+
+	//vkCmdCopyBuffer(gfxCmd, src->buff, dst->buff, 1, &copy);
+
+	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, barriers + 1);
+
+	EXIT_ON_VK_ERROR(vkEndCommandBuffer(gfxCmd));
+
+	VkSubmitInfo submit = {};
+	submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit.commandBufferCount = 1;
+	submit.pCommandBuffers = &gfxCmd;
+	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submit, VK_NULL_HANDLE));
+	EXIT_ON_VK_ERROR(vkQueueWaitIdle(queues[Q_GRAPHICS]));
 }
 
 void Renderer::UploadDataToBuffer(

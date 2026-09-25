@@ -2,6 +2,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include "Renderer.hpp"
 #include <Eigen/Dense>
 
 struct Vec2
@@ -63,6 +64,10 @@ public:
 	void parseObjectTree(
 		aiNode* node,
 		const Eigen::Matrix4f& transform);
+
+	void UploadTextureData(
+		Renderer* renderer,
+		Image* imageResource);
 
 	void UploadObjectTransforms(char* mmap);
 

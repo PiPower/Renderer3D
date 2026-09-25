@@ -1,8 +1,31 @@
 #include "Scene.hpp"
 #pragma comment (lib, "assimp-vc145-mt.lib")
 #include <Windows.h>
+#include <thread>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+
+static void imgLoadThread(
+    size_t i,
+    std::vector<Material>* materials,
+    const std::string& rootPath,
+    char* stagingPtr,
+    size_t imgSize)
+{
+    if (materials->at(i).baseColorPath == "")
+    {
+        return;
+    }
+
+    std::string filePath = rootPath + materials->at(i).baseColorPath;
+    int x, y, comp;
+    int forceRGBA = 4;
+    stbi_uc* imgData = stbi_load(filePath.c_str(), &x, &y, &comp, forceRGBA);
+    memcpy(stagingPtr, imgData, imgSize);
+    stbi_image_free(imgData);
+}
+
 
 Scene::Scene(
     const std::string& rootPath,
@@ -133,6 +156,52 @@ void Scene::parseObjectTree(
     {
         parseObjectTree(node->mChildren[i], localTransform);
     }
+}
+
+void Scene::UploadTextureData(
+    Renderer* renderer, 
+    Image* imageResource)
+{
+    uint64_t stagingSize = renderer->GetStagingSize();
+    uint64_t imgSize = materials[0].colorTex.width * materials[0].colorTex.height * 4;
+    uint64_t imgsPerIteraiton = stagingSize / imgSize;
+    char* stagingPtr = renderer->GetStagingPtr();
+
+    if (imgsPerIteraiton < 1)
+    {
+        throw std::runtime_error("Staging buffer size is too small\n");
+    }
+    uint32_t imgCount = 0;
+    size_t currMaterial = 0;
+    while (currMaterial < materials.size())
+    {
+        {
+        std::vector<std::jthread> threadPool;
+        for (size_t i = 0; i < imgsPerIteraiton && currMaterial < materials.size(); i++, currMaterial++)
+        {
+            if (materials[currMaterial].baseColorPath != "")
+            {
+                threadPool.emplace_back(imgLoadThread, currMaterial, &materials, rootPath, stagingPtr + imgCount * imgSize, imgSize);
+                imgCount++;
+            }
+        }
+        }
+        VkBufferImageCopy copyRegion;
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = imgsPerIteraiton;
+        copyRegion.imageOffset = { 0, 0, 0 };
+        copyRegion.imageExtent = { (uint32_t)materials[0].colorTex.width, (uint32_t)materials[0].colorTex.width, 1 };
+        renderer->UploadStagingToImage(imageResource, 1, &copyRegion);
+        int x = 2;
+
+    }
+
+
 }
 
 void Scene::UploadObjectTransforms(char* mmap)

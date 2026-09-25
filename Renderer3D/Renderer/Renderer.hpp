@@ -29,6 +29,8 @@ struct Image
 	VkDeviceMemory mem;
 	VkImage img;
 	VkImageView imgView;
+	VkImageSubresourceRange range;
+	VkImageLayout currLayout;
 };
 
 struct Buffer
@@ -54,6 +56,10 @@ public:
 
 	void RenderFrame();
 
+	inline uint64_t GetStagingSize() { return stagingBuffer.buffInfo.size; }
+
+	inline char* GetStagingPtr() { return stagingBuffer.mmap; }
+
 	Image AllocateImage(
 		const VkImageCreateInfo& imgInfo,
 		const VkImageViewCreateInfo& viewInfo,
@@ -62,6 +68,11 @@ public:
 	Buffer AllocateBuffer(
 		const VkBufferCreateInfo& buffInfo,
 		VkMemoryPropertyFlagBits memProps);
+
+	void UploadStagingToImage(
+		Image* img,
+		uint32_t regionCount,
+		const VkBufferImageCopy* pRegions);
 
 	void UploadDataToBuffer(
 		Buffer* dst,

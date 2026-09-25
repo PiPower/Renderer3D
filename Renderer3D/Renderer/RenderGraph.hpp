@@ -105,6 +105,8 @@ public:
 
 	void Render(void* args);
 
+	Image* GetImage(const std::string& name);
+
 	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
 private:
 	RenderingPipeline CompilePipeline(RenderPass* renderPass);
