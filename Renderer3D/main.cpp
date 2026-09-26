@@ -3,8 +3,22 @@
 #include <string>
 #include "Renderer/Scene.hpp"
 #include "Camera.h"
+#define SKYBOX_WIDTH 1920
+#define SKYBOX_HEIGHT 1920
+
 #undef max
 using namespace std;
+
+struct Texel
+{
+    unsigned char r, g, b, a;
+};
+
+void CreateSkybox(
+    uint32_t width,
+    uint32_t height,
+    Image* skyboxImg,
+    Renderer* renderer);
 
 void RenderStep(
     const RenderResources& args,
@@ -56,7 +70,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetColorMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
-    rg.DescribeImage("skybox_tex", texDesc.width, texDesc.height, 6, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_CUBE);
+    rg.DescribeImage("skybox_tex", SKYBOX_WIDTH, SKYBOX_HEIGHT, 6, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_CUBE);
 
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
@@ -107,6 +121,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     char* objectUbo = rg.GetPtrToVisibleBuffer("object_transform");
     scene.UploadObjectTransforms(objectUbo);
     scene.UploadTextureData(&renderer, rg.GetImage("colorTex"));
+    CreateSkybox(SKYBOX_WIDTH, SKYBOX_HEIGHT, rg.GetImage("skybox_tex"), &renderer);
     RenderingData rd = scene.GetRenderingData();
 
     Eigen::Vector3f pos { 0, 0, -7 };
@@ -130,6 +145,65 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         dt = (float)duration.count() / 1'000'000'000.0f;
         //dt = 0.001;
     }
+
+}
+
+void CreateSkybox(
+    uint32_t width,
+    uint32_t height,
+    Image* skyboxImg,
+    Renderer* renderer)
+{
+    std::vector<Texel> texelBuffer(width * height);
+    Texel* texData = texelBuffer.data();
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            float x0 = ((float)x / (float)width) * 3 - 2.2f;
+            float y0 = ((float)y / (float)height) * 3 - 1.4f;
+            float z_x = 0;
+            float z_y = 0;
+            constexpr uint16_t max_iteration = 300;
+            uint16_t i = 0;
+            while (z_x * z_x + z_y * z_y < 4.0f && i < max_iteration)
+            {
+                float xtemp = z_x * z_x - z_y * z_y + x0;
+                z_y = 2 * z_x * z_y + y0;
+                z_x = xtemp;
+                i++;
+            }
+
+
+            texData[width * y + x].a = 255;
+            texData[width * y + x].r = ((float)i / (float)max_iteration) * 255;
+            texData[width * y + x].g = sinf(((float)i / (float)max_iteration) * 2 * 3.14) * 255;
+            texData[width * y + x].b = ((float)i / (float)max_iteration) * 255;
+        }
+    }
+    uint64_t stagingSize = renderer->GetStagingSize(); 
+    if (stagingSize < width * height * sizeof(Texel) * 6)
+    {
+        throw std::runtime_error("Staging buffer to small for cube mapping texture data\n");
+    }
+    char* data = renderer->GetStagingPtr();
+    for (int i = 0; i < 6; i++)
+    {
+        memcpy(data + i * width * height * sizeof(Texel), texData, width * height * sizeof(Texel));
+    }
+
+    VkBufferImageCopy copyRegion;
+    copyRegion.bufferOffset = 0;
+    copyRegion.bufferRowLength = 0;
+    copyRegion.bufferImageHeight = 0;
+    copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.imageSubresource.mipLevel = 0;
+    copyRegion.imageSubresource.baseArrayLayer = 0;
+    copyRegion.imageSubresource.layerCount = 6;
+    copyRegion.imageOffset = { 0, 0, 0 };
+    copyRegion.imageExtent = { width, height, 1 };
+    renderer->UploadStagingToImage(skyboxImg, 1, &copyRegion);
 
 }
 
