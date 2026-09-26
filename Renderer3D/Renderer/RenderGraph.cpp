@@ -651,7 +651,7 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(
 		attachmentInfo->resolveMode = VK_RESOLVE_MODE_NONE;
 		attachmentInfo->resolveImageView = VK_NULL_HANDLE;
 		attachmentInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 		attachmentInfo->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachmentInfo->clearValue.color = { 0.4, 0.9, 0.9, 1.0f };
 		if (!deps->isCleared[imgIdx])
@@ -671,8 +671,8 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(
 		depthAttInfo->resolveMode = VK_RESOLVE_MODE_NONE;
 		depthAttInfo->resolveImageView = VK_NULL_HANDLE;
 		depthAttInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttInfo->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depthAttInfo->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttInfo->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		depthAttInfo->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		depthAttInfo->clearValue.depthStencil = { 1.0f, 0 };
 
 		if (!deps->isCleared[imgIdx])
