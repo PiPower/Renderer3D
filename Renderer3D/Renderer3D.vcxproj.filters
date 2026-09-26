@@ -69,5 +69,7 @@
   <ItemGroup>
     <None Include="shaders\simple.vert" />
     <None Include="shaders\simple.frag" />
+    <None Include="shaders\skybox.vert" />
+    <None Include="shaders\skybox.frag" />
   </ItemGroup>
 </Project>

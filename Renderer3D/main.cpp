@@ -12,10 +12,21 @@ void RenderStep(
     const RenderingPipeline* pipeline,
     void* args2);
 
+void SkyboxStep(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline,
+    void* args2);
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
     char pathBuffer[2048];
-    GetEnvironmentVariable(L"SCENE", (LPWSTR)pathBuffer, 1024);
+    DWORD ret = GetEnvironmentVariable(L"SCENE", (LPWSTR)pathBuffer, 1024);
+    if (ret == 0)
+    {
+        MessageBox(NULL, L"Enviroment variable \"SCENE\" not found", NULL, MB_OK);
+        exit(-1);
+    }
     // this is trivial utf16 to ascii conversion. it probably does not support 
     // every possible path but screw that
     int i = 0;
@@ -45,9 +56,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetColorMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    rg.DescribeImage("skybox_tex", texDesc.width, texDesc.height, 6, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_CUBE);
 
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
+    rg.DescribeShader("skybox_vert", "main", "shaders/skybox.vert");
+    rg.DescribeShader("skybox_frag", "main", "shaders/skybox.frag");
     rg.MarkAsDisplayImage("output");
 
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
@@ -64,15 +78,25 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddVertexShader("simple_vert");
 	rpSimple->AddFragmentShader("simple_frag");
     rpSimple->SetRenderFunction(RenderStep);
+
     rpSimple->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
     rpSimple->SetBlendEnable(0, VK_TRUE).SetSrcColorBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA);
     rpSimple->SetDstColorBlendFactor(0, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA).SetColorBlendOp(0, VK_BLEND_OP_ADD);
     rpSimple->SetSrcAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA).SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA);
     rpSimple->SetAlphaBlendOp(0, VK_BLEND_OP_ADD);
-    //RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
-	//rpSimple->AddTextureImage("skybox");
-    //rpSimple->AddOutputImage("output");
+    // ------- Skybox Pass -------
+    RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
+    rpSkybox->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+	rpSkybox->AddTextureImage("skybox_tex", 6, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
+    rpSkybox->AddColorAttachment("output");
+    rpSkybox->AddDepthImage("depth_image");
 
+    rpSkybox->AddVertexShader("skybox_vert");
+    rpSkybox->AddFragmentShader("skybox_frag");
+    rpSkybox->SetRenderFunction(SkyboxStep);
+
+    rpSkybox->SetDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
+    // ------- Setting up resources -------
 	rg.Compile(&renderer);
     rg.UploadDataToBuffer("vertex", scene.GetVertexByteSize(), (const char*)scene.GetVertexPtr(), 0, 0);
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
@@ -158,4 +182,28 @@ void RenderStep(
         }
 
     }
+}
+
+void SkyboxStep(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline,
+    void* args2)
+{
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = 1600;
+    viewport.height = 900;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(cmdBuff, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = { 1600, 900 };
+    vkCmdSetScissor(cmdBuff, 0, 1, &scissor);
+
+    vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 0, nullptr);
+    vkCmdDraw(cmdBuff, 36, 1, 0, 0);
 }

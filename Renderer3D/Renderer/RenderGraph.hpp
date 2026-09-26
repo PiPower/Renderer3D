@@ -55,6 +55,42 @@ struct PipelineRenderingDesc
 	std::vector<VkFormat> outputFormats;
 };
 
+struct ImageDependency
+{
+	VkImageLayout currLayout;
+	const Image* imgPtr;
+};
+
+struct ResourceDependency
+{
+	std::vector<VkImageLayout> imgLayouts;
+	std::vector<bool> isCleared;
+	std::vector<const Image*> images;
+
+	ResourceDependency(const std::vector<Image>& imgs)
+		:
+		imgLayouts(imgs.size()), images(imgs.size()), isCleared(imgs.size())
+	{
+		for (size_t i = 0; i < imgs.size(); i++)
+		{
+			imgLayouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;
+			images[i] = &imgs[i];
+			isCleared[i] = false;
+		}
+	}
+
+	size_t FindImg(const Image* img)
+	{
+		for (size_t imgIdx = 0; imgIdx < images.size(); imgIdx++)
+		{
+			if (images[imgIdx] == img)
+			{
+				return imgIdx;
+			}
+		}
+	}
+};
+
 class RenderGraph
 {
 public:
@@ -132,7 +168,9 @@ private:
 
 	void AllocateResources();
 
-	RenderInfoStruct CreateRenderInfoForPass(const RenderResources& resources);
+	RenderInfoStruct CreateRenderInfoForPass(
+		const RenderResources& resources,
+		ResourceDependency* deps);
 
 	void RunPipeline(
 		const RenderingPipeline& renderPipeline,
@@ -147,11 +185,11 @@ private:
 
 	void FindInitialLayoutForImages(
 		RenderPass* renderPass,
-		std::vector<VkImageLayout>* layouts);
+		ResourceDependency* deps);
 
 	void InitializeLayouts(const std::vector<VkImageLayout>& initialLayouts);
 private:
-	std::vector<RenderPass> renderPasses;
+	std::vector<RenderPass*> renderPasses;
 	std::vector<ImageResource*> imgResource;
 	std::vector<BufferResource*> buffResource;
 	std::vector<ShaderDesc*> shaders;

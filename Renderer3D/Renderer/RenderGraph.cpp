@@ -8,7 +8,6 @@
 #define EXIT_ON_VK_ERROR(expr){VkResult __result__ = (expr); if(__result__ != VK_SUCCESS){\
 	MessageBox(NULL, L"vkResult is error\nLINE: " STRINGIFY(__LINE__) "\nFILE: " STRINGIFY(__FILE__), NULL, MB_OK); exit(-1); }}
 
-
 template<typename BufferType>
 static void FilterBuffers(
 	const std::vector<BufferType>& searchedBuffers,
@@ -106,10 +105,10 @@ RenderPass* RenderGraph::CreateRenderPass(
 		throw std::runtime_error("RenderPass with name '" + name + "' already exists.");
 	}
 
-	renderPasses.push_back(RenderPass(this, isGraphicsPass));
+	renderPasses.push_back(new RenderPass(this, isGraphicsPass));
 	renderPassNames[name] = renderPasses.size() - 1;
 
-	return &renderPasses.back();
+	return renderPasses.back();
 }
 
 void RenderGraph::Compile(Renderer* rendererInst)
@@ -121,14 +120,14 @@ void RenderGraph::Compile(Renderer* rendererInst)
 	renderer = rendererInst;
 
 	AllocateResources();
-	std::vector<VkImageLayout> initLayout(execGraph.imageResources.size(), VK_IMAGE_LAYOUT_UNDEFINED);
+	ResourceDependency deps(execGraph.imageResources);
 	for (size_t i = 0; i < renderPasses.size(); ++i)
 	{
-		RenderingPipeline pipeline = CompilePipeline(&renderPasses[i]);
-		RenderResources passResources = CreateRenderResources(&renderPasses[i]);
-		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources);
-		FindInitialLayoutForImages(&renderPasses[i], &initLayout);
-		FillDescriptorSets(&renderPasses[i], &pipeline.sets);
+		RenderingPipeline pipeline = CompilePipeline(renderPasses[i]);
+		RenderResources passResources = CreateRenderResources(renderPasses[i]);
+		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources, &deps);
+		FindInitialLayoutForImages(renderPasses[i], &deps);
+		FillDescriptorSets(renderPasses[i], &pipeline.sets);
 
 		execGraph.pipelines.push_back(std::move(pipeline));
 		execGraph.renderResources.push_back(passResources);
@@ -149,7 +148,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		exit(-1);
 	}
 
-	InitializeLayouts(initLayout);
+	InitializeLayouts(deps.imgLayouts);
 
 	if (!displayImageRes)
 	{
@@ -170,9 +169,9 @@ void RenderGraph::MarkAsDisplayImage(const std::string& name)
 
 void RenderGraph::FindInitialLayoutForImages(
 	RenderPass* renderPass,
-	std::vector<VkImageLayout>* layouts)
+	ResourceDependency* deps)
 {
-	std::vector<VkImageLayout>& layoutsRef = *layouts;
+	std::vector<VkImageLayout>& layoutsRef = deps->imgLayouts;
 
 	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
 	{
@@ -462,24 +461,35 @@ VkDescriptorPool RenderGraph::CreateDescriptorPool(
 		}
 	}
 
+	uint32_t validSets = 0;
+	if (unifrom > 0)
+	{
+		poolSizes[validSets] = {};
+		poolSizes[validSets].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[validSets].descriptorCount = unifrom;
+		validSets++;
+	}
 
-	poolSizes[0] = {};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = unifrom;
+	if (uniformDynamic > 0)
+	{
+		poolSizes[validSets] = {};
+		poolSizes[validSets].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		poolSizes[validSets].descriptorCount = uniformDynamic;
+		validSets++;
+	}
 
-
-	poolSizes[1] = {};
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-	poolSizes[1].descriptorCount = uniformDynamic;
-
-	poolSizes[2] = {};
-	poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-	poolSizes[2].descriptorCount = (uint32_t)renderPass->textureImages.size();
+	if (renderPass->textureImages.size() > 0)
+	{
+		poolSizes[validSets] = {};
+		poolSizes[validSets].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		poolSizes[validSets].descriptorCount = (uint32_t)renderPass->textureImages.size();
+		validSets++;
+	}
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.maxSets = 3;
-	poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
+	poolInfo.poolSizeCount = validSets;
 	poolInfo.pPoolSizes = poolSizes.data();
 
 	EXIT_ON_VK_ERROR(vkCreateDescriptorPool(renderer->GetDevice(), &poolInfo, nullptr, &pool));
@@ -548,7 +558,7 @@ void RenderGraph::AllocateResources()
 
 		imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imgInfo.pNext = nullptr;
-		imgInfo.flags = 0;
+		imgInfo.flags =  img->viewType == VK_IMAGE_VIEW_TYPE_CUBE ?  VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 		imgInfo.imageType = getVkImageType(img->viewType);
 		imgInfo.format = img->format;
 		imgInfo.extent = imgExtent;
@@ -622,7 +632,9 @@ void RenderGraph::AllocateResources()
 
 }
 
-RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& resources)
+RenderInfoStruct RenderGraph::CreateRenderInfoForPass(
+	const RenderResources& resources,
+	ResourceDependency* deps)
 {
 	RenderInfoStruct info = {};
 	size_t descCount = resources.colorImages.size() + 1; // 1 for depth image if not present skip it
@@ -630,19 +642,28 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& res
 
 	for (size_t i = 0; i < resources.colorImages.size(); i++)
 	{
+		size_t imgIdx = deps->FindImg(resources.colorImages[i]);
+
 		VkRenderingAttachmentInfo* attachmentInfo = &info.attachments[i];
 		attachmentInfo->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		attachmentInfo->imageView = resources.colorImages[i]->imgView;
 		attachmentInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		attachmentInfo->resolveMode = VK_RESOLVE_MODE_NONE;
-		attachmentInfo->resolveImageView = VK_NULL_HANDLE ;
+		attachmentInfo->resolveImageView = VK_NULL_HANDLE;
 		attachmentInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachmentInfo->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachmentInfo->clearValue.color = { 0.4, 0.9, 0.9, 1.0f };
+		if (!deps->isCleared[imgIdx])
+		{
+			attachmentInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			deps->isCleared[imgIdx] = true;
+		}
 	}
 	if (resources.depthImage)
 	{
+		size_t imgIdx = deps->FindImg(resources.depthImage);
+
 		VkRenderingAttachmentInfo* depthAttInfo = &info.attachments[resources.colorImages.size()];
 		depthAttInfo->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		depthAttInfo->imageView = resources.depthImage->imgView;
@@ -650,9 +671,15 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(const RenderResources& res
 		depthAttInfo->resolveMode = VK_RESOLVE_MODE_NONE;
 		depthAttInfo->resolveImageView = VK_NULL_HANDLE;
 		depthAttInfo->resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttInfo->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		depthAttInfo->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttInfo->clearValue.depthStencil = { 1.0f, 0 };
+
+		if (!deps->isCleared[imgIdx])
+		{
+			depthAttInfo->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			deps->isCleared[imgIdx] = true;
+		}
 	}
 
 
@@ -731,8 +758,14 @@ void RenderGraph::RunPipeline(
 	}
 	vkCmdBeginRendering(cmdBuffer, &renderInfo->renderingInfo);
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPipeline.pipeline);
-	vkCmdBindVertexBuffers(cmdBuffer, 0, (uint32_t)resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
-	vkCmdBindIndexBuffer(cmdBuffer, resources.indexBuffers[0]->buff, 0, renderPipeline.indexTypes[0]);
+	if (resources.vertexBuffers.size() > 0)
+	{
+		vkCmdBindVertexBuffers(cmdBuffer, 0, (uint32_t)resources.vertexBuffers.size(), vb.data(), vbOffsets.data());
+	}
+	if (renderPipeline.indexTypes.size() > 0)
+	{
+		vkCmdBindIndexBuffer(cmdBuffer, resources.indexBuffers[0]->buff, 0, renderPipeline.indexTypes[0]);
+	}
 
 	renderPipeline.renderFn(resources, cmdBuffer, &renderPipeline, args);
 

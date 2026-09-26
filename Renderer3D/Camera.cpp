@@ -94,7 +94,7 @@ void Camera::ProcessUserInput(
 		}
 
 		// IMPORTANT: Order MATTERS !!!!
-		float angleRange = 3.14f /2.0 - 0.1;
+		float angleRange = 3.14f /2.0;
 		angleX = std::clamp(angleX, -angleRange, angleRange);
 
 		Matrix3f rotMat;
