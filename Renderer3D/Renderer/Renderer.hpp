@@ -90,6 +90,8 @@ public:
 
 	void RunCommandsAndSync(const VkSubmitInfo& submitInfo);
 
+	void RunGfxCommands	(const VkSubmitInfo& submitInfo);
+
 	void DisplayImageAndSync(
 		VkImage srcImage, 
 		VkImageLayout layout);

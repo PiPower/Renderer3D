@@ -13,6 +13,7 @@ struct RenderingPipeline
 	std::vector<VkDescriptorSet> sets;
 	RenderFunction renderFn;
 	std::vector<VkIndexType> indexTypes;
+	std::vector<VkImageMemoryBarrier2> imgBarriers;
 };
 
 struct RenderInfoStruct
@@ -58,12 +59,14 @@ struct PipelineRenderingDesc
 struct ImageDependency
 {
 	VkImageLayout currLayout;
-	const Image* imgPtr;
+	VkPipelineStageFlags2 currStage;
+	VkAccessFlags2 currAccess;
 };
 
 struct ResourceDependency
 {
 	std::vector<VkImageLayout> imgLayouts;
+	std::unordered_map<const Image*, ImageDependency> imgDeps;
 	std::vector<bool> isCleared;
 	std::vector<const Image*> images;
 
@@ -183,9 +186,10 @@ private:
 		RenderPass* renderPass,
 		std::vector<VkDescriptorSet>* sets);
 
-	void FindInitialLayoutForImages(
+	void FindInitialLayoutsAndBarriersForImages(
 		RenderPass* renderPass,
-		ResourceDependency* deps);
+		ResourceDependency* deps,
+		std::vector<VkImageMemoryBarrier2>* barriers);
 
 	void InitializeLayouts(const std::vector<VkImageLayout>& initialLayouts);
 private:

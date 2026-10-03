@@ -126,7 +126,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		RenderingPipeline pipeline = CompilePipeline(renderPasses[i]);
 		RenderResources passResources = CreateRenderResources(renderPasses[i]);
 		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources, &deps);
-		FindInitialLayoutForImages(renderPasses[i], &deps);
+		FindInitialLayoutsAndBarriersForImages(renderPasses[i], &deps, &pipeline.imgBarriers);
 		FillDescriptorSets(renderPasses[i], &pipeline.sets);
 
 		execGraph.pipelines.push_back(std::move(pipeline));
@@ -167,9 +167,10 @@ void RenderGraph::MarkAsDisplayImage(const std::string& name)
 	}
 }
 
-void RenderGraph::FindInitialLayoutForImages(
+void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 	RenderPass* renderPass,
-	ResourceDependency* deps)
+	ResourceDependency* deps,
+	std::vector<VkImageMemoryBarrier2>* barriers)
 {
 	std::vector<VkImageLayout>& layoutsRef = deps->imgLayouts;
 
@@ -182,7 +183,26 @@ void RenderGraph::FindInitialLayoutForImages(
 		{
 			layoutsRef[imgIdx] = renderPass->outputImages[i].layout;
 		}
+		else
+		{
+			ImageDependency imgDep = deps->imgDeps.find(deps->images[imgIdx])->second;
+			VkImageMemoryBarrier2 imgBarrier = {};
+			imgBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+			imgBarrier.srcStageMask = imgDep.currStage;
+			imgBarrier.srcAccessMask = imgDep.currAccess;
+			imgBarrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+			imgBarrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+			imgBarrier.oldLayout = imgDep.currLayout;
+			imgBarrier.newLayout = renderPass->outputImages[i].layout;
+			imgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.image = deps->images[imgIdx]->img;
+			imgBarrier.subresourceRange = deps->images[imgIdx]->range;
+			barriers->push_back(imgBarrier);
+		}
 
+		deps->imgDeps[deps->images[imgIdx]] = ImageDependency{ renderPass->outputImages[i].layout,
+			  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT };
 	}
 
 	if (renderPass->depthImage.layout != VK_IMAGE_LAYOUT_UNDEFINED)
@@ -194,6 +214,28 @@ void RenderGraph::FindInitialLayoutForImages(
 		{
 			layoutsRef[imgIdx] = renderPass->depthImage.layout;
 		}
+		else
+		{
+			ImageDependency imgDep = deps->imgDeps.find(deps->images[imgIdx])->second;
+
+			VkImageMemoryBarrier2 imgBarrier = {};
+			imgBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+			imgBarrier.srcStageMask = imgDep.currStage;
+			imgBarrier.srcAccessMask = imgDep.currAccess;
+			imgBarrier.dstStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+			imgBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			imgBarrier.oldLayout = imgDep.currLayout;
+			imgBarrier.newLayout = renderPass->depthImage.layout;
+			imgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.image = deps->images[imgIdx]->img;
+			imgBarrier.subresourceRange = deps->images[imgIdx]->range;
+			barriers->push_back(imgBarrier);
+		}
+
+		deps->imgDeps[deps->images[imgIdx]] = ImageDependency{renderPass->depthImage.layout,
+			  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+															VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT };
 	}
 
 	for (size_t i = 0; i < renderPass->textureImages.size(); i++)
@@ -708,8 +750,18 @@ void RenderGraph::Render(void* args)
 		cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+		VkDependencyInfo passDeps = {};
+		passDeps.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		passDeps.imageMemoryBarrierCount = (uint32_t)execGraph.pipelines[i].imgBarriers.size();
+		passDeps.pImageMemoryBarriers = execGraph.pipelines[i].imgBarriers.data();
+
 		EXIT_ON_VK_ERROR(vkResetCommandBuffer(execGraph.gfxCmdBuffers[i], 0));
 		EXIT_ON_VK_ERROR(vkBeginCommandBuffer(execGraph.gfxCmdBuffers[i], &cmdInfo));
+
+		if (execGraph.pipelines[i].imgBarriers.size() > 0)
+		{
+			vkCmdPipelineBarrier2(execGraph.gfxCmdBuffers[i], &passDeps);
+		}
 
 		RunPipeline(
 			execGraph.pipelines[i],
@@ -724,7 +776,7 @@ void RenderGraph::Render(void* args)
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &execGraph.gfxCmdBuffers[i];
-		renderer->RunCommandsAndSync(submitInfo);
+		renderer->RunGfxCommands(submitInfo);
 	}
 
 	renderer->DisplayImageAndSync(displayImage->img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

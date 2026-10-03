@@ -19,7 +19,8 @@ const static char* instExt[] = {
 
 const static char* devExt[] = { 
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
+	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME};
 
 const static char* vaLayers[] = { 
 	"VK_LAYER_KHRONOS_validation" };
@@ -273,6 +274,13 @@ void Renderer::UploadStagingToImage(
 	uint32_t regionCount, 
 	const VkBufferImageCopy* pRegions)
 {
+	VkMappedMemoryRange range = {};
+	range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+	range.memory = stagingBuffer.mem;
+	range.offset = 0;
+	range.size = stagingBuffer.buffInfo.size;
+	EXIT_ON_VK_ERROR(vkFlushMappedMemoryRanges(lgDev, 1, &range));
+
 	VkImageMemoryBarrier barriers[2];
 	barriers[0] = {};
 	barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -382,6 +390,11 @@ void Renderer::RunCommandsAndSync(const VkSubmitInfo& submitInfo)
 	EXIT_ON_VK_ERROR(vkQueueWaitIdle(queues[Q_GRAPHICS]));
 }
 
+void Renderer::RunGfxCommands(const VkSubmitInfo& submitInfo)
+{
+	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submitInfo, nullptr));
+}
+
 void Renderer::DisplayImageAndSync(
 	VkImage srcImage,
 	VkImageLayout layout)
@@ -476,8 +489,11 @@ void Renderer::DisplayImageAndSync(
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &gfxCmd;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &imgReady;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &renderingFinished;
 	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submitInfo, nullptr));
-	vkQueueWaitIdle(queues[Q_GRAPHICS]);
 
 	VkPresentInfoKHR info = {};
 	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -485,7 +501,7 @@ void Renderer::DisplayImageAndSync(
 	info.pSwapchains = &swc.swapchain;
 	info.pImageIndices = &imageIndex;
 	info.waitSemaphoreCount = 1;
-	info.pWaitSemaphores = &imgReady;
+	info.pWaitSemaphores = &renderingFinished;
 	EXIT_ON_VK_ERROR(vkQueuePresentKHR(queues[Q_PRES], &info));
 	vkQueueWaitIdle(queues[Q_PRES]);
 
@@ -619,6 +635,11 @@ void Renderer::CreateLogicalDevice()
 	dynamicRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
 	dynamicRendering.dynamicRendering = VK_TRUE;
 
+	VkPhysicalDeviceSynchronization2Features sync2 = {};
+	sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+	sync2.synchronization2 = VK_TRUE;
+
+	dynamicRendering.pNext = &sync2;
 	VkDeviceCreateInfo devInfo = {};
 	devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	devInfo.pNext = &dynamicRendering;
