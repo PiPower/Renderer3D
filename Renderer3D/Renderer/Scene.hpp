@@ -55,6 +55,7 @@ struct RenderingData
 	const std::vector<RenderItem>& renderItems;
 	const MeshCollection& sceneGeometry;
 	const std::vector<Material>& materials;
+	size_t opaqueMaterialsCount;
 };
 
 class Scene
@@ -74,7 +75,7 @@ public:
 
 	void UploadObjectTransforms(char* mmap);
 
-	RenderingData GetRenderingData() { return{ renderItems, sceneGeometry, materials }; }
+	RenderingData GetRenderingData() { return{ renderItems, sceneGeometry, materials, opaqueMaterialsCount }; }
 
 	inline size_t GetRenderItemCount() { return renderItems.size(); }
 
@@ -115,6 +116,6 @@ private:
 	std::vector<RenderItem> renderItems;
 	uint32_t uboOffset;
 	uint32_t colorMaterials;
-
+	size_t opaqueMaterialsCount;
 };
 

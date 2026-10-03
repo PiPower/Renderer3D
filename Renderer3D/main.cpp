@@ -24,7 +24,26 @@ void RenderStep(
     const RenderResources& args,
     VkCommandBuffer cmdBuff,
     const RenderingPipeline* pipeline,
-    void* args2);
+    void* args2,
+    bool isOpaqueRender);
+
+void RenderStepOpaque(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline,
+    void* args2)
+{
+    RenderStep(args, cmdBuff, pipeline, args2, true);
+}
+
+void RenderStepTransparent(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline,
+    void* args2)
+{
+    RenderStep(args, cmdBuff, pipeline, args2, false);
+}
 
 void SkyboxStep(
     const RenderResources& args,
@@ -77,6 +96,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeShader("skybox_frag", "main", "shaders/skybox.frag");
     rg.MarkAsDisplayImage("output");
 
+	// ------- Non transparent objects -------
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
 	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
     rpSimple->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
@@ -90,13 +110,37 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     rpSimple->AddVertexShader("simple_vert");
 	rpSimple->AddFragmentShader("simple_frag");
-    rpSimple->SetRenderFunction(RenderStep);
+    rpSimple->SetRenderFunction(RenderStepOpaque);
 
     rpSimple->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
-    rpSimple->SetBlendEnable(0, VK_TRUE).SetSrcColorBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA);
-    rpSimple->SetDstColorBlendFactor(0, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA).SetColorBlendOp(0, VK_BLEND_OP_ADD);
-    rpSimple->SetSrcAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA).SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA);
-    rpSimple->SetAlphaBlendOp(0, VK_BLEND_OP_ADD);
+    rpSimple->SetBlendEnable(0, VK_FALSE);
+	// ------- Transparent objects -------
+    RenderPass* rpTransparent = rg.CreateRenderPass("TransparentMainPass", true);
+    rpTransparent->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rpTransparent->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rpTransparent->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
+    rpTransparent->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
+    rpTransparent->AddDepthImage("depth_image");
+    rpTransparent->SetDepthWriteEnable(VK_FALSE);
+    rpTransparent->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+    rpTransparent->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
+    rpTransparent->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
+    rpTransparent->AddColorAttachment("output");
+
+    rpTransparent->AddVertexShader("simple_vert");
+    rpTransparent->AddFragmentShader("simple_frag");
+    rpTransparent->SetRenderFunction(RenderStepTransparent);
+
+    rpTransparent->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
+    rpTransparent->SetBlendEnable(0, VK_TRUE)
+        .SetSrcColorBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA)
+        .SetDstColorBlendFactor(0, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+        .SetColorBlendOp(0, VK_BLEND_OP_ADD)
+        .SetSrcAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA)
+        .SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_CONSTANT_ALPHA)
+        .SetAlphaBlendOp(0, VK_BLEND_OP_ADD)
+        .SetBlendConstant3(0.35f);
+
     // ------- Skybox Pass -------
     RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
     rpSkybox->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
@@ -211,7 +255,8 @@ void RenderStep(
     const RenderResources& args,
     VkCommandBuffer cmdBuff,
     const RenderingPipeline* pipeline,
-    void* args2)
+    void* args2,
+    bool isOpaqueRender)
 {
     RenderingData* rd = (RenderingData*)args2;
 
@@ -232,7 +277,9 @@ void RenderStep(
     uint32_t offsets[1] = { 0 };
     vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
 
-    for (size_t item = 0; item < rd->renderItems.size(); item++)
+	size_t bound = isOpaqueRender ? rd->opaqueMaterialsCount : rd->renderItems.size();
+
+    for (size_t item = isOpaqueRender? 0 : rd->opaqueMaterialsCount; item < bound; item++)
     {
         const RenderItem* renderItem = &rd->renderItems[item];
         uint32_t dynamicOffset[1] = { renderItem->uboOffset };

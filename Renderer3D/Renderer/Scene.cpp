@@ -139,6 +139,15 @@ Scene::Scene(
 	std::sort(renderItems.begin(), renderItems.end(), [this](const RenderItem& a, const RenderItem& b) {
 		return materials[sceneGeometry.materialIdx[a.meshIdx[0]]].opacity > materials[sceneGeometry.materialIdx[b.meshIdx[0]]].opacity;
 		});
+
+	for (size_t i = 0; i < renderItems.size(); i++)
+	{
+		if (materials[sceneGeometry.materialIdx[renderItems[i].meshIdx[0]]].opacity < 1.0f)
+		{
+			opaqueMaterialsCount = i;
+			break;
+		}
+	}
 }
 
 void Scene::parseObjectTree(
