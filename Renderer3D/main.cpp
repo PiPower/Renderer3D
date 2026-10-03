@@ -59,7 +59,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     TextureDesc texDesc = scene.GetColorTextureDesc();
     uint32_t trsfMatrixSize = 16 * sizeof(float);
 
-
     RenderGraph rg;
     rg.DescribeBuffer("vertex", scene.GetVertexByteSize());
     rg.DescribeBuffer("normal", scene.GetNormalsByteSize());
@@ -133,6 +132,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.3f, 80.0f);
 
     float dt = 0.001f;
+
     while (wnd.ProcessMessages() == 0)
     {
         cam.ProcessUserInput(&wnd, dt * 10);
@@ -241,12 +241,12 @@ void RenderStep(
         for (size_t i = 0; i < renderItem->meshIdx.size(); i++)
         {
             uint32_t currentMesh = renderItem->meshIdx[i];
-            uint32_t materialIndex = rd->sceneGeometry.colorTexIndex[currentMesh];
-            if (materialIndex == std::numeric_limits<uint32_t>::max())
+            uint32_t colorIdx = rd->sceneGeometry.colorTexIndex[currentMesh];
+            if (colorIdx == std::numeric_limits<uint32_t>::max())
             {
                 continue;
             }
-            vkCmdPushConstants(cmdBuff, pipeline->layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4, &materialIndex);
+            vkCmdPushConstants(cmdBuff, pipeline->layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4, &colorIdx);
             vkCmdDrawIndexed(cmdBuff,
                 rd->sceneGeometry.indexCount[currentMesh],
                 1, 

@@ -1,5 +1,5 @@
 #version 450                                                                        
-                                                                                                
+                                                                                             
 layout(binding = 1) uniform samplerCube gCubemapTexture;                                                
                      
 layout(location = 0) in vec3 dirVec;  

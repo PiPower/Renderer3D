@@ -52,13 +52,15 @@ Scene::Scene(
         aiReturn ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColor);
         ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &normals);
         aiString d = processedMaterial->GetName();
+        float opacity = 1.0f;
+        processedMaterial->Get(AI_MATKEY_OPACITY, opacity);
 
         uint32_t materialColorIdx = std::numeric_limits<uint32_t>::max();
         if (baseColor.length != 0)
         {
             materialColorIdx = colorMaterials++;
         }
-        materials.emplace_back(processedMaterial->GetName().C_Str(), baseColor.C_Str(), TextureDesc{}, normals.C_Str(), materialColorIdx);
+        materials.emplace_back(processedMaterial->GetName().C_Str(), baseColor.C_Str(), TextureDesc{}, normals.C_Str(), materialColorIdx, opacity);
         if (materials.back().name.length() == 0)
         {
             continue;
@@ -124,13 +126,19 @@ Scene::Scene(
         sceneGeometry.ibOffset.push_back(idxOffset * 3);
         sceneGeometry.indexCount.push_back(scene->mMeshes[i]->mNumFaces * 3);
         sceneGeometry.colorTexIndex.push_back(materials[scene->mMeshes[i]->mMaterialIndex].colorIndex);
-
+		sceneGeometry.materialIdx.push_back(scene->mMeshes[i]->mMaterialIndex);
         vecOffest += scene->mMeshes[i]->mNumVertices;
         idxOffset += scene->mMeshes[i]->mNumFaces;
     }
     Eigen::Matrix4f init = Eigen::Matrix4f::Zero();
     for (int i = 0; i < 4; i++) { init(i, i) = 1;}
     parseObjectTree(scene->mRootNode, init);
+
+	// transparent objects should be rendered after opaque ones, so we sort them by opacity
+	// quick and dirty solution, but it works for now
+	std::sort(renderItems.begin(), renderItems.end(), [this](const RenderItem& a, const RenderItem& b) {
+		return materials[sceneGeometry.materialIdx[a.meshIdx[0]]].opacity > materials[sceneGeometry.materialIdx[b.meshIdx[0]]].opacity;
+		});
 }
 
 void Scene::parseObjectTree(

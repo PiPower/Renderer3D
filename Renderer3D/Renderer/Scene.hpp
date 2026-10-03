@@ -4,7 +4,7 @@
 #include <assimp/postprocess.h>
 #include "Renderer.hpp"
 #include <Eigen/Dense>
-
+#include <vector>
 struct Vec2
 {
 	float x, y;
@@ -30,13 +30,7 @@ struct MeshCollection
 	std::vector<uint32_t> ibOffset;
 	std::vector<uint32_t> indexCount;
 	std::vector<uint32_t> colorTexIndex;
-};
-
-struct RenderingData
-{
-	const std::vector<RenderItem>& renderItems;
-	const MeshCollection& sceneGeometry;
-
+	std::vector<size_t> materialIdx;
 };
 
 struct TextureDesc
@@ -45,6 +39,7 @@ struct TextureDesc
 	int width;
 	int components; // if comp == 4 -> RGBA
 };
+
 struct Material
 {
 	std::string name;
@@ -52,6 +47,14 @@ struct Material
 	TextureDesc colorTex;
 	std::string normalsPath;
 	uint32_t colorIndex; // if index == UIN32_MAX then material has no color 
+	float opacity;
+};
+
+struct RenderingData
+{
+	const std::vector<RenderItem>& renderItems;
+	const MeshCollection& sceneGeometry;
+	const std::vector<Material>& materials;
 };
 
 class Scene
@@ -71,7 +74,7 @@ public:
 
 	void UploadObjectTransforms(char* mmap);
 
-	RenderingData GetRenderingData() { return{ renderItems, sceneGeometry }; }
+	RenderingData GetRenderingData() { return{ renderItems, sceneGeometry, materials }; }
 
 	inline size_t GetRenderItemCount() { return renderItems.size(); }
 
@@ -107,7 +110,7 @@ private:
 	std::vector<Vec3> vertices;
 	std::vector<Vec3> normals;
 	std::vector<Vec2> texCoords;
-	std::vector <uint32_t> indecies;
+	std::vector<uint32_t> indecies;
 	std::vector<Material> materials;
 	std::vector<RenderItem> renderItems;
 	uint32_t uboOffset;

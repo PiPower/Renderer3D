@@ -4,8 +4,8 @@
 //push constants block
 layout( push_constant ) uniform constants
 {
-    int indecies;
-} PushConstants;
+    int textureId;
+} pc;
 
 
 layout(set = 1, binding = 0) uniform sampler2DArray textures;
@@ -18,7 +18,7 @@ layout(location = 3) in vec4 worldPosLightCoord;
 layout(location = 0) out vec4 outColor;
 void main()
 {
-    outColor = texture(textures, vec3(texCoord.x, texCoord.y, PushConstants.indecies.x) );
+    outColor = texture(textures, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
     vec3 norm = normalize(faceNormal);
