@@ -484,6 +484,7 @@ void Renderer::DisplayImageAndSync(
 	vkCmdPipelineBarrier(gfxCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 2, barriers + 2);
 
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_TRANSFER_BIT };
 	EXIT_ON_VK_ERROR(vkEndCommandBuffer(gfxCmd));
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -493,6 +494,7 @@ void Renderer::DisplayImageAndSync(
 	submitInfo.pWaitSemaphores = &imgReady;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderingFinished;
+	submitInfo.pWaitDstStageMask = waitStages;
 	EXIT_ON_VK_ERROR(vkQueueSubmit(queues[Q_GRAPHICS], 1, &submitInfo, nullptr));
 
 	VkPresentInfoKHR info = {};
