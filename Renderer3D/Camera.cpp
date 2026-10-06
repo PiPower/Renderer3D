@@ -61,6 +61,22 @@ void Camera::UpdateProjMatrix(
 	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
 }
 
+void Camera::UpdateOrthographicProjMatrix(
+	float viewWidth,
+	float viewHeight,
+	float NearZ,
+	float FarZ)
+{
+	float fRange = 1.0f / (FarZ - NearZ);
+
+	proj(0, 0) = static_cast<float>(2) / (viewWidth);
+	proj(1, 1) = -static_cast<float>(2) / (viewHeight);
+	proj(2, 2) = fRange;
+	proj(2, 3) = -fRange * NearZ;
+	proj(3, 2) = 1.0f;
+	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
+}
+
 void Camera::ProcessUserInput(
 	Window* window,
 	float dt)

@@ -20,6 +20,12 @@ void CreateSkybox(
     Image* skyboxImg,
     Renderer* renderer);
 
+void ShadowpassStep(
+	const RenderResources& args,
+	VkCommandBuffer cmdBuff,
+	const RenderingPipeline* pipeline,
+	void* args2);
+
 void RenderStep(
     const RenderResources& args,
     VkCommandBuffer cmdBuff,
@@ -84,17 +90,30 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("texcoord", scene.GetTexByteSize());
     rg.DescribeBuffer("index", scene.GetIndexByteSize());
     rg.DescribeBuffer("camera", 2 * trsfMatrixSize, true, true);
+    rg.DescribeBuffer("light_camera", 2 * trsfMatrixSize, true, true);
     rg.DescribeBuffer("object_transform", scene.GetRenderItemCount() * trsfMatrixSize, true, true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetColorMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
     rg.DescribeImage("skybox_tex", SKYBOX_WIDTH, SKYBOX_HEIGHT, 6, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_CUBE);
+    rg.DescribeImage("shadowmap", 4096, 4096, 1, VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
 
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
+    rg.DescribeShader("shadowpass_vert", "main", "shaders/shadowpass.vert");
     rg.DescribeShader("simple_frag", "main", "shaders/simple.frag");
     rg.DescribeShader("skybox_vert", "main", "shaders/skybox.vert");
     rg.DescribeShader("skybox_frag", "main", "shaders/skybox.frag");
     rg.MarkAsDisplayImage("output");
+    // ------- Shadow Pass -------
+    RenderPass* rpShadow = rg.CreateRenderPass("ShadowPass", true);
+    rpShadow->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    rpShadow->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
+    rpShadow->AddDepthImage("shadowmap");
+	rpShadow->AddUniformBuffer("light_camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+	rpShadow->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
+	rpShadow->AddVertexShader("shadowpass_vert");
+	rpShadow->SetRenderFunction(ShadowpassStep);
+	rpShadow->SetDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	// ------- Non transparent objects -------
 	RenderPass* rpSimple = rg.CreateRenderPass("SimpleMainPass", true);
@@ -106,6 +125,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
     rpSimple->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
+    rpSimple->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
+
 	rpSimple->AddColorAttachment("output");
 
     rpSimple->AddVertexShader("simple_vert");
@@ -126,6 +147,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpTransparent->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
     rpTransparent->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
     rpTransparent->AddColorAttachment("output");
+    rpTransparent->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
 
     rpTransparent->AddVertexShader("simple_vert");
     rpTransparent->AddFragmentShader("simple_frag");
@@ -161,6 +183,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
 
     char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
+    char* lightUbo = rg.GetPtrToVisibleBuffer("light_camera");
     char* objectUbo = rg.GetPtrToVisibleBuffer("object_transform");
     scene.UploadObjectTransforms(objectUbo);
     scene.UploadTextureData(&renderer, rg.GetImage("colorTex"));
@@ -170,11 +193,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Eigen::Vector3f pos { 0, 0, -7 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
+    Eigen::Vector3f lightPos{ 0, 40, 0 };
+    Eigen::Vector3f lightDir{ 0, -1, 1 };
+    Eigen::Vector3f lightUp{ 1 , 0, 0 };
+
     Camera cam(pos, lookDir, up, cameraUbo);
+    Camera lightCam(lightPos, lightDir, lightUp, lightUbo);
     VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
     cam.UpdateViewMatrix();
     cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.3f, 80.0f);
 
+	lightCam.UpdateViewMatrix();
+	lightCam.UpdateOrthographicProjMatrix(80, 80, 0.1f, 128.0f);
     float dt = 0.001f;
 
     while (wnd.ProcessMessages() == 0)
@@ -249,6 +279,14 @@ void CreateSkybox(
     copyRegion.imageExtent = { width, height, 1 };
     renderer->UploadStagingToImage(skyboxImg, 1, &copyRegion);
 
+}
+
+void ShadowpassStep(
+    const RenderResources& args,
+    VkCommandBuffer cmdBuff,
+    const RenderingPipeline* pipeline,
+    void* args2)
+{
 }
 
 void RenderStep(

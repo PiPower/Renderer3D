@@ -19,6 +19,12 @@ public:
 		float NearZ,
 		float FarZ);
 
+	void UpdateOrthographicProjMatrix(
+		float viewWidth,
+		float viewHeight,
+		float NearZ,
+		float FarZ);
+
 	void ProcessUserInput(
 		Window* window,
 		float dt);

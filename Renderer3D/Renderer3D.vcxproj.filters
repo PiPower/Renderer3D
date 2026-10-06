@@ -71,5 +71,6 @@
     <None Include="shaders\simple.frag" />
     <None Include="shaders\skybox.vert" />
     <None Include="shaders\skybox.frag" />
+    <None Include="shaders\shadowpass.vert" />
   </ItemGroup>
 </Project>

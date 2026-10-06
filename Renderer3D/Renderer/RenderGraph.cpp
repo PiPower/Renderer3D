@@ -777,6 +777,8 @@ void RenderGraph::Render(void* args)
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &execGraph.gfxCmdBuffers[i];
 		renderer->RunGfxCommands(submitInfo);
+
+		break;
 	}
 
 	renderer->DisplayImageAndSync(displayImage->img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

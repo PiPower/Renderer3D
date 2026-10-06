@@ -7,8 +7,8 @@ layout( push_constant ) uniform constants
     int textureId;
 } pc;
 
-
-layout(set = 1, binding = 0) uniform sampler2DArray textures;
+layout(set = 0, binding = 1) uniform sampler2D shadowmap;
+layout(set = 1, binding = 0) uniform sampler2DArray diffuseMaps;
 
 layout(location = 0) in vec3 faceNormal;
 layout(location = 1) in vec2 texCoord; 
@@ -18,7 +18,7 @@ layout(location = 3) in vec4 worldPosLightCoord;
 layout(location = 0) out vec4 outColor;
 void main()
 {
-    outColor = texture(textures, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
+    outColor = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
     vec3 norm = normalize(faceNormal);

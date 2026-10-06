@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <inttypes.h>
-
+#include <type_traits>
 enum class QueueType
 {
 	Graphics = 0,
