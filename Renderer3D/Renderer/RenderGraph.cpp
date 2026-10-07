@@ -307,6 +307,10 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 			{
 				nextLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
 			}
+			else if (imgDep.currLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			{
+				nextLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			}
 
 			VkImageMemoryBarrier2 imgBarrier = {};
 			imgBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -315,7 +319,7 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 			imgBarrier.dstStageMask = shaderStagesToPipelineStages2(renderPass->textureImages[i].stages);
 			imgBarrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
 			imgBarrier.oldLayout = imgDep.currLayout;
-			imgBarrier.newLayout = renderPass->depthImage.layout;
+			imgBarrier.newLayout = nextLayout;
 			imgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			imgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			imgBarrier.image = deps->images[imgIdx]->img;
