@@ -182,7 +182,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		execGraph.renderResources.push_back(passResources);
 		execGraph.renderInfo.push_back(std::move(renderInfo));
 	}
-
+	execGraph.resetImageBarriers = FindResetBarriersForImages(deps);
 	execGraph.gfxCmdPool = renderer->CreateGraphicsCommandPool();
 	execGraph.gfxCmdBuffers.resize(renderPasses.size());
 
@@ -222,6 +222,8 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 	std::vector<VkImageMemoryBarrier2>* barriers)
 {
 	std::vector<VkImageLayout>& layoutsRef = deps->imgLayouts;
+	std::vector<VkAccessFlags2>& accessRef = deps->initAccesses;
+	std::vector<VkPipelineStageFlags2>& stageRef = deps->initStages;
 
 	for (size_t i = 0; i < renderPass->outputImages.size(); i++)
 	{
@@ -231,6 +233,8 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
 		{
 			layoutsRef[imgIdx] = renderPass->outputImages[i].layout;
+			accessRef[imgIdx] = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+			stageRef[imgIdx] = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}
 		else
 		{
@@ -262,6 +266,8 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
 		{
 			layoutsRef[imgIdx] = renderPass->depthImage.layout;
+			accessRef[imgIdx] = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			stageRef[imgIdx] = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
 		}
 		else
 		{
@@ -295,6 +301,8 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
 		{
 			layoutsRef[imgIdx] = renderPass->textureImages[i].layout;
+			accessRef[imgIdx] = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+			stageRef[imgIdx] = shaderStagesToPipelineStages2(renderPass->textureImages[i].stages);
 			deps->imgDeps[deps->images[imgIdx]] = ImageDependency{ layoutsRef[imgIdx],
 					shaderStagesToPipelineStages2(renderPass->textureImages[i].stages), 
 					VK_ACCESS_2_SHADER_SAMPLED_READ_BIT};
@@ -356,7 +364,6 @@ void RenderGraph::InitializeLayouts(const std::vector<VkImageLayout>& initialLay
 
 		execGraph.imageResources[i].currLayout = initialLayouts[i];
 	}
-
 	VkCommandBuffer cmdBuff = execGraph.gfxCmdBuffers[0];
 
 	VkCommandBufferBeginInfo cmdInfo = { };
@@ -377,6 +384,11 @@ void RenderGraph::InitializeLayouts(const std::vector<VkImageLayout>& initialLay
 	EXIT_ON_VK_ERROR(vkEndCommandBuffer(cmdBuff));
 	renderer->RunCommandsAndSync(submitInfo);
 
+}
+
+std::vector<VkImageMemoryBarrier2> RenderGraph::FindResetBarriersForImages(const ResourceDependency& finalDeps)
+{
+	return std::vector<VkImageMemoryBarrier2>();
 }
 
 RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)

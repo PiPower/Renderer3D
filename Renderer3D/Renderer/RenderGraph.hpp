@@ -32,6 +32,7 @@ struct ExecutionGraph
 	std::vector<RenderResources> renderResources;
 	VkCommandPool gfxCmdPool;
 	std::vector<VkCommandBuffer> gfxCmdBuffers;
+	std::vector<VkImageMemoryBarrier2> resetImageBarriers;
 };
 
 struct ShaderDesc
@@ -65,6 +66,8 @@ struct ImageDependency
 
 struct ResourceDependency
 {
+	std::vector<VkPipelineStageFlags2> initStages;
+	std::vector<VkAccessFlags2> initAccesses;
 	std::vector<VkImageLayout> imgLayouts;
 	std::unordered_map<const Image*, ImageDependency> imgDeps;
 	std::vector<bool> isCleared;
@@ -72,7 +75,7 @@ struct ResourceDependency
 
 	ResourceDependency(const std::vector<Image>& imgs)
 		:
-		imgLayouts(imgs.size()), images(imgs.size()), isCleared(imgs.size())
+		initStages(imgs.size()), initAccesses(imgs.size()), imgLayouts(imgs.size()), images(imgs.size()), isCleared(imgs.size())
 	{
 		for (size_t i = 0; i < imgs.size(); i++)
 		{
@@ -144,6 +147,7 @@ public:
 
 	void Render(void* args);
 
+
 	Image* GetImage(const std::string& name);
 
 	inline ExecutionGraph* GetExecutionGraph() { return &execGraph; }
@@ -192,6 +196,8 @@ private:
 		std::vector<VkImageMemoryBarrier2>* barriers);
 
 	void InitializeLayouts(const std::vector<VkImageLayout>& initialLayouts);
+
+	std::vector<VkImageMemoryBarrier2> FindResetBarriersForImages(const ResourceDependency& finalDeps);
 private:
 	std::vector<RenderPass*> renderPasses;
 	std::vector<ImageResource*> imgResource;
