@@ -31,6 +31,7 @@ struct Image
 	VkImageView imgView;
 	VkImageSubresourceRange range;
 	VkImageLayout currLayout;
+	VkImageCreateInfo imgInfo;
 };
 
 struct Buffer

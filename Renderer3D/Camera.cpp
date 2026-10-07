@@ -73,7 +73,7 @@ void Camera::UpdateOrthographicProjMatrix(
 	proj(1, 1) = -static_cast<float>(2) / (viewHeight);
 	proj(2, 2) = fRange;
 	proj(2, 3) = -fRange * NearZ;
-	proj(3, 2) = 1.0f;
+	proj(3, 3) = 1.0f;
 	memcpy(mmapPtr + MATRIX_SIZE, proj.data(), MATRIX_SIZE);
 }
 

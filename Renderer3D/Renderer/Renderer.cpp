@@ -244,7 +244,7 @@ Image Renderer::AllocateImage(
 	info.image = out.img;
 	EXIT_ON_VK_ERROR(vkCreateImageView(lgDev, &info, nullptr, &out.imgView));
 	out.range = viewInfo.subresourceRange;
-	out.currLayout = imgInfo.initialLayout;
+	out.imgInfo = imgInfo;
 	return out;
 }
 

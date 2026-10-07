@@ -37,6 +37,55 @@ static inline constexpr shaderc_shader_kind extendKind(
 	return rcCollection;
 }
 
+static VkPipelineStageFlags2 shaderStagesToPipelineStages2(VkShaderStageFlags stages)
+{
+	VkPipelineStageFlags2 result = 0;
+
+	if (stages & VK_SHADER_STAGE_VERTEX_BIT)
+		result |= VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+
+	if (stages & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT)
+		result |= VK_PIPELINE_STAGE_2_TESSELLATION_CONTROL_SHADER_BIT;
+
+	if (stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
+		result |= VK_PIPELINE_STAGE_2_TESSELLATION_EVALUATION_SHADER_BIT;
+
+	if (stages & VK_SHADER_STAGE_GEOMETRY_BIT)
+		result |= VK_PIPELINE_STAGE_2_GEOMETRY_SHADER_BIT;
+
+	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
+		result |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+
+	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
+		result |= VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+
+	if (stages & VK_SHADER_STAGE_TASK_BIT_EXT)
+		result |= VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT;
+
+	if (stages & VK_SHADER_STAGE_MESH_BIT_EXT)
+		result |= VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT;
+
+	if (stages & VK_SHADER_STAGE_RAYGEN_BIT_KHR)
+		result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & VK_SHADER_STAGE_ANY_HIT_BIT_KHR)
+		result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR)
+		result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & VK_SHADER_STAGE_MISS_BIT_KHR)
+		result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & VK_SHADER_STAGE_INTERSECTION_BIT_KHR)
+		result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & VK_SHADER_STAGE_CALLABLE_BIT_KHR)
+		result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+
+	return result;
+}
+
 static VkImageAspectFlags GetAspectMask(VkFormat format)
 {
 	VkImageAspectFlags aspectMask = 0;
@@ -246,8 +295,37 @@ void RenderGraph::FindInitialLayoutsAndBarriersForImages(
 		if (layoutsRef[imgIdx] == VK_IMAGE_LAYOUT_UNDEFINED)
 		{
 			layoutsRef[imgIdx] = renderPass->textureImages[i].layout;
+			deps->imgDeps[deps->images[imgIdx]] = ImageDependency{ layoutsRef[imgIdx],
+					shaderStagesToPipelineStages2(renderPass->textureImages[i].stages), 
+					VK_ACCESS_2_SHADER_SAMPLED_READ_BIT};
 		}
+		else
+		{
+			ImageDependency imgDep = deps->imgDeps.find(deps->images[imgIdx])->second;
+			VkImageLayout nextLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			if (imgDep.currLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+			{
+				nextLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+			}
 
+			VkImageMemoryBarrier2 imgBarrier = {};
+			imgBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+			imgBarrier.srcStageMask = imgDep.currStage;
+			imgBarrier.srcAccessMask = imgDep.currAccess;
+			imgBarrier.dstStageMask = shaderStagesToPipelineStages2(renderPass->textureImages[i].stages);
+			imgBarrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+			imgBarrier.oldLayout = imgDep.currLayout;
+			imgBarrier.newLayout = renderPass->depthImage.layout;
+			imgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.image = deps->images[imgIdx]->img;
+			imgBarrier.subresourceRange = deps->images[imgIdx]->range;
+			barriers->push_back(imgBarrier);
+
+			deps->imgDeps[deps->images[imgIdx]] = ImageDependency{ nextLayout,
+								imgBarrier.dstStageMask ,imgBarrier.dstAccessMask };
+
+		}
 	}
 }
 
@@ -723,12 +801,17 @@ RenderInfoStruct RenderGraph::CreateRenderInfoForPass(
 			deps->isCleared[imgIdx] = true;
 		}
 	}
-
+	VkExtent2D renderSize = renderer->GetSwapchainCapabilities().currentExtent;
+	if(resources.colorImages.size() == 0 && resources.depthImage)
+	{
+		const VkExtent3D& imgExtent = resources.depthImage->imgInfo.extent;
+		renderSize = { imgExtent.width, imgExtent.height };
+	}
 
 	info.renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	info.renderingInfo.renderArea = {
 		{0 ,0},
-		renderer->GetSwapchainCapabilities().currentExtent };
+		renderSize };
 	info.renderingInfo.layerCount = 1;
 	info.renderingInfo.viewMask = 0;
 	info.renderingInfo.colorAttachmentCount = (uint32_t)resources.colorImages.size();
@@ -778,7 +861,6 @@ void RenderGraph::Render(void* args)
 		submitInfo.pCommandBuffers = &execGraph.gfxCmdBuffers[i];
 		renderer->RunGfxCommands(submitInfo);
 
-		break;
 	}
 
 	renderer->DisplayImageAndSync(displayImage->img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

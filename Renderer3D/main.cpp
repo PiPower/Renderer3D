@@ -5,7 +5,7 @@
 #include "Camera.h"
 #define SKYBOX_WIDTH 1920
 #define SKYBOX_HEIGHT 1920
-
+#define SHADOWMAP_DIM 4096
 #undef max
 using namespace std;
 
@@ -96,7 +96,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetColorMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
     rg.DescribeImage("skybox_tex", SKYBOX_WIDTH, SKYBOX_HEIGHT, 6, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_CUBE);
-    rg.DescribeImage("shadowmap", 4096, 4096, 1, VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
+    rg.DescribeImage("shadowmap", SHADOWMAP_DIM, SHADOWMAP_DIM, 1, VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
 
     rg.DescribeShader("simple_vert", "main", "shaders/simple.vert");
     rg.DescribeShader("shadowpass_vert", "main", "shaders/shadowpass.vert");
@@ -135,6 +135,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     rpSimple->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
     rpSimple->SetBlendEnable(0, VK_FALSE);
+
 	// ------- Transparent objects -------
     RenderPass* rpTransparent = rg.CreateRenderPass("TransparentMainPass", true);
     rpTransparent->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
@@ -193,18 +194,19 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Eigen::Vector3f pos { 0, 0, -7 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
-    Eigen::Vector3f lightPos{ 0, 40, 0 };
-    Eigen::Vector3f lightDir{ 0, -1, 1 };
-    Eigen::Vector3f lightUp{ 1 , 0, 0 };
+    Eigen::Vector3f lightPos{ 0, 30, 0 };
+    Eigen::Vector3f lightDir{ 0, -1, 0 };
+    Eigen::Vector3f lightUp{ -1 , 0, 0 };
 
-    Camera cam(pos, lookDir, up, cameraUbo);
+    Camera cam(lightPos, lightDir, lightUp, cameraUbo);
     Camera lightCam(lightPos, lightDir, lightUp, lightUbo);
     VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
     cam.UpdateViewMatrix();
     cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.3f, 80.0f);
 
 	lightCam.UpdateViewMatrix();
-	lightCam.UpdateOrthographicProjMatrix(80, 80, 0.1f, 128.0f);
+	lightCam.UpdateOrthographicProjMatrix(40, 60, 0.3f, 50.0f);
+
     float dt = 0.001f;
 
     while (wnd.ProcessMessages() == 0)
@@ -287,6 +289,48 @@ void ShadowpassStep(
     const RenderingPipeline* pipeline,
     void* args2)
 {
+    RenderingData* rd = (RenderingData*)args2;
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = SHADOWMAP_DIM;
+    viewport.height = SHADOWMAP_DIM;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(cmdBuff, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = { SHADOWMAP_DIM, SHADOWMAP_DIM };
+    vkCmdSetScissor(cmdBuff, 0, 1, &scissor);
+
+    uint32_t offsets[1] = { 0 };
+    vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, 3, pipeline->sets.data(), 1, offsets);
+
+    for (size_t item = 0; item < rd->opaqueMaterialsCount; item++)
+    {
+        const RenderItem* renderItem = &rd->renderItems[item];
+        uint32_t dynamicOffset[1] = { renderItem->uboOffset };
+        vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 2, 1, pipeline->sets.data() + 2, 1, dynamicOffset);
+
+        for (size_t i = 0; i < renderItem->meshIdx.size(); i++)
+        {
+            uint32_t currentMesh = renderItem->meshIdx[i];
+            uint32_t colorIdx = rd->sceneGeometry.colorTexIndex[currentMesh];
+            if (colorIdx == std::numeric_limits<uint32_t>::max())
+            {
+                continue;
+            }
+            vkCmdDrawIndexed(cmdBuff,
+                rd->sceneGeometry.indexCount[currentMesh],
+                1,
+                rd->sceneGeometry.ibOffset[currentMesh],
+                rd->sceneGeometry.vbOffset[currentMesh],
+                0);
+        }
+
+    }
 }
 
 void RenderStep(
