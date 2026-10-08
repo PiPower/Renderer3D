@@ -194,7 +194,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Eigen::Vector3f pos { 0, 0, -7 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
-    Eigen::Vector3f lightPos{ 0, 30, 0 };
+    Eigen::Vector3f lightPos{ 2.5, 30, 0 };
     Eigen::Vector3f lightDir{ 0, -1, 0 };
     Eigen::Vector3f lightUp{ -1 , 0, 0 };
 
@@ -205,7 +205,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     cam.UpdateProjMatrix(3.14f / 4.0f, (float)screenRes.width/ (float)screenRes.height, 0.3f, 80.0f);
 
 	lightCam.UpdateViewMatrix();
-	lightCam.UpdateOrthographicProjMatrix(40, 60, 0.3f, 50.0f);
+	lightCam.UpdateOrthographicProjMatrix(30, 40, 0.3f, 50.0f);
 
     float dt = 0.001f;
 
