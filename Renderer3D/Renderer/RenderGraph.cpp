@@ -182,7 +182,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		execGraph.renderResources.push_back(passResources);
 		execGraph.renderInfo.push_back(std::move(renderInfo));
 	}
-	execGraph.resetImageBarriers = FindResetBarriersForImages(deps);
+	execGraph.resetImagesBarriers = FindResetBarriersForImages(deps);
 	execGraph.gfxCmdPool = renderer->CreateGraphicsCommandPool();
 	execGraph.gfxCmdBuffers.resize(renderPasses.size());
 
@@ -388,7 +388,36 @@ void RenderGraph::InitializeLayouts(const std::vector<VkImageLayout>& initialLay
 
 std::vector<VkImageMemoryBarrier2> RenderGraph::FindResetBarriersForImages(const ResourceDependency& finalDeps)
 {
-	return std::vector<VkImageMemoryBarrier2>();
+	const std::vector<VkPipelineStageFlags2>& initStages = finalDeps.initStages;
+	const std::vector<VkAccessFlags2>& initAccesses = finalDeps.initAccesses;
+	const std::vector<VkImageLayout>& imgLayouts = finalDeps.imgLayouts;
+
+	std::vector<VkImageMemoryBarrier2> resetBarriers;
+	for(size_t i = 0; i < finalDeps.images.size(); i++)
+	{
+		const Image* imgRes = finalDeps.images[i];
+		const ImageDependency& dep = finalDeps.imgDeps.find(imgRes)->second;
+		if (dep.currAccess != initAccesses[i] ||
+			dep.currLayout != imgLayouts[i] ||
+			dep.currStage != initStages[i])
+		{
+			VkImageMemoryBarrier2 imgBarrier = {};
+			imgBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+			imgBarrier.srcStageMask = dep.currStage;
+			imgBarrier.srcAccessMask = dep.currAccess;
+			imgBarrier.dstStageMask = initStages[i];
+			imgBarrier.dstAccessMask = initAccesses[i];
+			imgBarrier.oldLayout = dep.currLayout;
+			imgBarrier.newLayout = imgLayouts[i];
+			imgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgBarrier.image = imgRes->img;
+			imgBarrier.subresourceRange = imgRes->range;
+			resetBarriers.push_back(imgBarrier);
+		}
+
+	}
+	return resetBarriers;
 }
 
 RenderingPipeline RenderGraph::CompilePipeline(RenderPass* renderPass)
@@ -868,6 +897,15 @@ void RenderGraph::Render(void* args)
 			&execGraph.renderInfo[i],
 			execGraph.gfxCmdBuffers[i],
 			args);
+
+		if (i == execGraph.pipelines.size() - 1 && execGraph.resetImagesBarriers.size() > 0)
+		{
+			VkDependencyInfo resetDeps = {};
+			resetDeps.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			resetDeps.imageMemoryBarrierCount = (uint32_t)execGraph.resetImagesBarriers.size();
+			resetDeps.pImageMemoryBarriers = execGraph.resetImagesBarriers.data();
+			vkCmdPipelineBarrier2(execGraph.gfxCmdBuffers[i], &resetDeps);
+		}
 
 		EXIT_ON_VK_ERROR(vkEndCommandBuffer(execGraph.gfxCmdBuffers[i]));
 

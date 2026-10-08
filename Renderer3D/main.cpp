@@ -198,7 +198,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Eigen::Vector3f lightDir{ 0, -1, 0 };
     Eigen::Vector3f lightUp{ -1 , 0, 0 };
 
-    Camera cam(lightPos, lightDir, lightUp, cameraUbo);
+    Camera cam(pos, lookDir, up, cameraUbo);
     Camera lightCam(lightPos, lightDir, lightUp, lightUbo);
     VkExtent2D screenRes = renderer.GetSwapchainCapabilities().currentExtent;
     cam.UpdateViewMatrix();

@@ -32,7 +32,7 @@ struct ExecutionGraph
 	std::vector<RenderResources> renderResources;
 	VkCommandPool gfxCmdPool;
 	std::vector<VkCommandBuffer> gfxCmdBuffers;
-	std::vector<VkImageMemoryBarrier2> resetImageBarriers;
+	std::vector<VkImageMemoryBarrier2> resetImagesBarriers;
 };
 
 struct ShaderDesc
@@ -146,7 +146,6 @@ public:
 		const std::string& path);
 
 	void Render(void* args);
-
 
 	Image* GetImage(const std::string& name);
 

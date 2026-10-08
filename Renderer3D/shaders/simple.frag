@@ -18,6 +18,7 @@ layout(location = 3) in vec4 worldPosLightCoord;
 layout(location = 0) out vec4 outColor;
 void main()
 {
+    float shadow = texture(shadowmap, vec2(0, 0)).r;
     outColor = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
