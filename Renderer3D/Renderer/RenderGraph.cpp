@@ -176,7 +176,7 @@ void RenderGraph::Compile(Renderer* rendererInst)
 		RenderResources passResources = CreateRenderResources(renderPasses[i]);
 		RenderInfoStruct renderInfo = CreateRenderInfoForPass(passResources, &deps);
 		FindInitialLayoutsAndBarriersForImages(renderPasses[i], &deps, &pipeline.imgBarriers);
-		FillDescriptorSets(renderPasses[i], &pipeline.sets);
+		FillDescriptorSets(renderPasses[i], &pipeline.sets, deps);
 
 		execGraph.pipelines.push_back(std::move(pipeline));
 		execGraph.renderResources.push_back(passResources);
@@ -964,7 +964,8 @@ void RenderGraph::RunPipeline(
 
 void RenderGraph::FillDescriptorSets(
 	RenderPass* renderPass, 
-	std::vector<VkDescriptorSet>* sets)
+	std::vector<VkDescriptorSet>* sets,
+	const ResourceDependency& deps)
 {
 	size_t writeSetCount = renderPass->uniformBuffers.size() + renderPass->textureImages.size() ;
 	std::vector<VkWriteDescriptorSet> writeSets(writeSetCount);
@@ -1001,10 +1002,11 @@ void RenderGraph::FillDescriptorSets(
 			size_t imgI = i - renderPass->uniformBuffers.size();
 			const ImageResource* imgResource = renderPass->usedImages[renderPass->textureImages[imgI].i];
 			size_t imgIndex = imageLookup[imgResource];
+			VkImageLayout imgLayout = deps.imgDeps.find(deps.images[imgIndex])->second.currLayout;
 
 			VkDescriptorImageInfo* imgInfo = &imgInfos[imgI];
 			*imgInfo = {};
-			imgInfo->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imgInfo->imageLayout = imgLayout;
 			imgInfo->imageView = execGraph.imageResources[imgIndex].imgView;
 			imgInfo->sampler = sampler2D;
 

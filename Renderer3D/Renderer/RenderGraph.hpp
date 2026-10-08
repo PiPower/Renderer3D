@@ -187,7 +187,8 @@ private:
 
 	void FillDescriptorSets(
 		RenderPass* renderPass,
-		std::vector<VkDescriptorSet>* sets);
+		std::vector<VkDescriptorSet>* sets,
+		const ResourceDependency& deps);
 
 	void FindInitialLayoutsAndBarriersForImages(
 		RenderPass* renderPass,
