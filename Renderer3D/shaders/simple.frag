@@ -54,7 +54,8 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {
-    vec3 color = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) ).rgb;
+    vec4 tex = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x));
+    vec3 color = tex.rgb;
     float shadow = ShadowCalculation(worldPosLightCoord);
     vec3 ambient = lightProps.color.rgb * lightProps.color.w;
     float diffCoeff = max(dot(faceNormal, -lightProps.dir.xyz), 0.0);
@@ -66,7 +67,7 @@ void main()
     }
 
     outColor.rgb = ( (ambient + (1.0 - shadow)) + diffuse) * color;
-    outColor.a = 1;
+    outColor.a = tex.a;
 
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
