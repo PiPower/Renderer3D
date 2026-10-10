@@ -123,6 +123,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
     rpSimple->AddDepthImage("depth_image");
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+    rpSimple->AddUniformBuffer("light_camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
     rpSimple->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
     rpSimple->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -137,32 +138,32 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->SetBlendEnable(0, VK_FALSE);
 
 	// ------- Transparent objects -------
-    RenderPass* rpTransparent = rg.CreateRenderPass("TransparentMainPass", true);
-    rpTransparent->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
-    rpTransparent->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
-    rpTransparent->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
-    rpTransparent->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
-    rpTransparent->AddDepthImage("depth_image");
-    rpTransparent->SetDepthWriteEnable(VK_FALSE);
-    rpTransparent->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
-    rpTransparent->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
-    rpTransparent->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
-    rpTransparent->AddColorAttachment("output");
-    rpTransparent->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    rpTransparent->AddVertexShader("simple_vert");
-    rpTransparent->AddFragmentShader("simple_frag");
-    rpTransparent->SetRenderFunction(RenderStepTransparent);
-
-    rpTransparent->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
-    rpTransparent->SetBlendEnable(0, VK_TRUE)
-        .SetSrcColorBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA)
-        .SetDstColorBlendFactor(0, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-        .SetColorBlendOp(0, VK_BLEND_OP_ADD)
-        .SetSrcAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA)
-        .SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_CONSTANT_ALPHA)
-        .SetAlphaBlendOp(0, VK_BLEND_OP_ADD)
-        .SetBlendConstant3(0.35f);
+    //RenderPass* rpTransparent = rg.CreateRenderPass("TransparentMainPass", true);
+    //rpTransparent->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    //rpTransparent->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+    //rpTransparent->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
+    //rpTransparent->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
+    //rpTransparent->AddDepthImage("depth_image");
+    //rpTransparent->SetDepthWriteEnable(VK_FALSE);
+    //rpTransparent->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+    //rpTransparent->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
+    //rpTransparent->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
+    //rpTransparent->AddColorAttachment("output");
+    //rpTransparent->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
+    //
+    //rpTransparent->AddVertexShader("simple_vert");
+    //rpTransparent->AddFragmentShader("simple_frag");
+    //rpTransparent->SetRenderFunction(RenderStepTransparent);
+    //
+    //rpTransparent->AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4);
+    //rpTransparent->SetBlendEnable(0, VK_TRUE)
+    //    .SetSrcColorBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA)
+    //    .SetDstColorBlendFactor(0, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+    //    .SetColorBlendOp(0, VK_BLEND_OP_ADD)
+    //    .SetSrcAlphaBlendFactor(0, VK_BLEND_FACTOR_SRC_ALPHA)
+    //    .SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_CONSTANT_ALPHA)
+    //    .SetAlphaBlendOp(0, VK_BLEND_OP_ADD)
+    //    .SetBlendConstant3(0.35f);
 
     // ------- Skybox Pass -------
     RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
@@ -191,7 +192,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     CreateSkybox(SKYBOX_WIDTH, SKYBOX_HEIGHT, rg.GetImage("skybox_tex"), &renderer);
     RenderingData rd = scene.GetRenderingData();
 
-    Eigen::Vector3f pos { 0, 0, -7 };
+    Eigen::Vector3f pos { 0, 2, -3 };
     Eigen::Vector3f lookDir{ 0, 0, 1 };
     Eigen::Vector3f up{ 0 ,1, 0 };
     Eigen::Vector3f lightPos{ 2.5, 30, 0 };

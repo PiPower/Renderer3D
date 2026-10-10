@@ -1,27 +1,17 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
-/*
-struct Light
-{
-    vec4 color; // (R, G, B, Intensity)
-    vec4 pos;   // (x, y, z, unused)
-};
-
-layout(set = 0, binding = 0) uniform Globals
-{
-    mat4 view;
-    mat4 proj;
-    Light lights[LIGHT_COUNT]; // (R, G, B, Intensity);
-    mat4 lightViewProj[LIGHT_COUNT];
-} global;
-*/
-
 layout(set = 0, binding = 0) uniform  Camera
 {
     mat4 view;
     mat4 proj;
 } camera;
+
+layout(set = 0, binding = 1) uniform  Light
+{
+    mat4 view;
+    mat4 proj;
+} light;
 
 layout(set = 2, binding = 0) uniform  Object
 {
@@ -42,11 +32,10 @@ void main()
 {
 
     worldPos = obj.transform * vec4(inPosition, 1);
-    worldPosLightCoord = vec4(0.5, 0.7, 0.5, 1.0);
     faceNormal =  transpose(inverse(mat3(obj.transform))) * inNormal;
     texCoord = inTex;
-    //worldPos.x += 4;
-    //worldPos.z += 7;
+
+    worldPosLightCoord = light.proj * light.view * worldPos;
     gl_Position = camera.proj * camera.view * worldPos;
     
 }

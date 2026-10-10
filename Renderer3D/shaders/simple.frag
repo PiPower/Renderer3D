@@ -7,7 +7,7 @@ layout( push_constant ) uniform constants
     int textureId;
 } pc;
 
-layout(set = 0, binding = 1) uniform sampler2D shadowmap;
+layout(set = 0, binding = 2) uniform sampler2D shadowmap;
 layout(set = 1, binding = 0) uniform sampler2DArray diffuseMaps;
 
 layout(location = 0) in vec3 faceNormal;
@@ -16,10 +16,28 @@ layout(location = 2) in vec4 worldPos;
 layout(location = 3) in vec4 worldPosLightCoord;
 
 layout(location = 0) out vec4 outColor;
+
+float ShadowCalculation(vec4 fragPosLightSpace)
+{
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
+    float closestDepth = texture(shadowmap, projCoords.xy).r; 
+    float currentDepth = projCoords.z;
+    float bias = 0.005;
+
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    return shadow;
+}
+
+
 void main()
 {
-    float shadow = texture(shadowmap, vec2(0, 0)).r;
-    outColor = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
+    float shadow = ShadowCalculation(worldPosLightCoord);
+    vec4 tex = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
+    vec4 diffuse = tex;
+    outColor =  (1.0 - shadow) * diffuse;
+
+
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*
     vec3 norm = normalize(faceNormal);
