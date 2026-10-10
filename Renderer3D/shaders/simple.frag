@@ -7,7 +7,14 @@ layout( push_constant ) uniform constants
     int textureId;
 } pc;
 
-layout(set = 0, binding = 2) uniform sampler2D shadowmap;
+layout(set = 0, binding = 2) uniform  LightProperties
+{
+    vec4 color; //(r, g, b, intensity coefficient)
+    vec4 pos; // (x, y, z, unused)
+    vec4 dir; // (x, y, z, unused)
+} lightProps;
+
+layout(set = 0, binding = 3) uniform sampler2D shadowmap;
 layout(set = 1, binding = 0) uniform sampler2DArray diffuseMaps;
 
 layout(location = 0) in vec3 faceNormal;
@@ -47,11 +54,19 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {
+    vec3 color = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) ).rgb;
     float shadow = ShadowCalculation(worldPosLightCoord);
-    vec4 tex = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x) );
-    vec4 diffuse = tex;
-    outColor =  (1.0 - shadow) * diffuse;
+    vec3 ambient = lightProps.color.rgb * lightProps.color.w;
+    float diffCoeff = max(dot(faceNormal, -lightProps.dir.xyz), 0.0);
+    vec3 diffuse = diffCoeff * lightProps.color.rgb;
+    // if ocluded disable diffuse
+    if(shadow  > 0.99)
+    {
+        diffuse = diffuse * 0;
+    }
 
+    outColor.rgb = ( (ambient + (1.0 - shadow)) + diffuse) * color;
+    outColor.a = 1;
 
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*

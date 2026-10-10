@@ -14,6 +14,13 @@ struct Texel
     unsigned char r, g, b, a;
 };
 
+struct LightProperties
+{
+    Eigen::Vector4f color;
+    Eigen::Vector4f pos;
+    Eigen::Vector4f dir;
+};
+
 void CreateSkybox(
     uint32_t width,
     uint32_t height,
@@ -91,6 +98,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeBuffer("index", scene.GetIndexByteSize());
     rg.DescribeBuffer("camera", 2 * trsfMatrixSize, true, true);
     rg.DescribeBuffer("light_camera", 2 * trsfMatrixSize, true, true);
+    rg.DescribeBuffer("light_properties", sizeof(LightProperties), true, true);
     rg.DescribeBuffer("object_transform", scene.GetRenderItemCount() * trsfMatrixSize, true, true);
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
@@ -124,6 +132,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddDepthImage("depth_image");
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("light_camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
+    rpSimple->AddUniformBuffer("light_properties", sizeof(LightProperties), BindLevel::PER_PASS);
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
     rpSimple->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
     rpSimple->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -187,6 +196,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
     char* lightUbo = rg.GetPtrToVisibleBuffer("light_camera");
     char* objectUbo = rg.GetPtrToVisibleBuffer("object_transform");
+	char* lightPropertiesUbo = rg.GetPtrToVisibleBuffer("light_properties");
+
     scene.UploadObjectTransforms(objectUbo);
     scene.UploadTextureData(&renderer, rg.GetImage("colorTex"));
     CreateSkybox(SKYBOX_WIDTH, SKYBOX_HEIGHT, rg.GetImage("skybox_tex"), &renderer);
@@ -208,6 +219,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	lightCam.UpdateViewMatrix();
 	lightCam.UpdateOrthographicProjMatrix(30, 40, 0.3f, 50.0f);
 
+    LightProperties lightProps;
+    lightProps.color = Eigen::Vector4f(0.9, 0.9, 0.9, 0.5);
+	lightProps.pos = Eigen::Vector4f(lightPos.x(), lightPos.y(), lightPos.z(), 1);  
+	lightProps.dir = Eigen::Vector4f(lightDir.x(), lightDir.y(), lightDir.z(), 0);
+    lightProps.dir.normalize();
+    memcpy(lightPropertiesUbo, &lightProps, sizeof(LightProperties));
     float dt = 0.001f;
 
     while (wnd.ProcessMessages() == 0)
