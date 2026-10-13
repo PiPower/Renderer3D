@@ -42,11 +42,18 @@ struct TextureDesc
 
 struct Material
 {
+	enum PathType
+	{
+		BaseColor,
+		NormalMap
+	};
+
 	std::string name;
-	std::string baseColorPath;
+	std::array<std::string, 2> imagePaths;
 	TextureDesc colorTex;
-	std::string normalsPath;
-	uint32_t colorIndex; // if index == UIN32_MAX then material has no color 
+	TextureDesc normalMap;
+	uint32_t colorIndex; // if colorIndex == UIN32_MAX then material has no color 
+	uint32_t normalMapIndex; // if normalMapIndex == UIN32_MAX then material has no normal map
 	float opacity;
 };
 
@@ -71,7 +78,8 @@ public:
 
 	void UploadTextureData(
 		Renderer* renderer,
-		Image* imageResource);
+		Image* imageResource,
+		Material::PathType materialType);
 
 	void UploadObjectTransforms(char* mmap);
 
@@ -101,7 +109,11 @@ public:
 
 	inline uint32_t GetColorMaterialCount() { return colorMaterials; }
 
+	inline uint32_t GetNormalMapCount() { return normalMaps; }
+
 	inline TextureDesc GetColorTextureDesc() { return materials[0].colorTex; }
+
+	inline TextureDesc GetNormalMapDesc() { return materials[0].normalMap; }
 private:
 	std::string rootPath;
 	std::string sceneName;
@@ -116,6 +128,7 @@ private:
 	std::vector<RenderItem> renderItems;
 	uint32_t uboOffset;
 	uint32_t colorMaterials;
+	uint32_t normalMaps;
 	size_t opaqueMaterialsCount;
 };
 

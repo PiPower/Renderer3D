@@ -89,6 +89,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     wnd.RegisterResizezable(&renderer, Renderer::OnResize);
 	Scene scene(rootPath, "NewSponza_Main_glTF_003.gltf");
     TextureDesc texDesc = scene.GetColorTextureDesc();
+    TextureDesc normalMapDesc = scene.GetNormalMapDesc();
+
     uint32_t trsfMatrixSize = 16 * sizeof(float);
 
     RenderGraph rg;
@@ -103,6 +105,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.DescribeImage("output", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, renderer.GetSwapchainFormat(), VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("depth_image", SWAPCHAIN_RELATIVE, SWAPCHAIN_RELATIVE, 1, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
     rg.DescribeImage("colorTex", texDesc.width, texDesc.height, scene.GetColorMaterialCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    rg.DescribeImage("normalMap", normalMapDesc.width, normalMapDesc.height, scene.GetNormalMapCount(), VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
     rg.DescribeImage("skybox_tex", SKYBOX_WIDTH, SKYBOX_HEIGHT, 6, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_CUBE);
     rg.DescribeImage("shadowmap", SHADOWMAP_DIM, SHADOWMAP_DIM, 1, VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_VIEW_TYPE_2D);
 
@@ -136,6 +139,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->AddUniformBuffer("object_transform", trsfMatrixSize, BindLevel::PER_OBJECT, true);
     rpSimple->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
     rpSimple->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
+    rpSimple->AddTextureImage("normalMap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	rpSimple->AddColorAttachment("output");
 
@@ -147,6 +151,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rpSimple->SetBlendEnable(0, VK_FALSE);
 
 	// ------- Transparent objects -------
+    /*
    RenderPass* rpTransparent = rg.CreateRenderPass("TransparentMainPass", true);
    rpTransparent->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
    rpTransparent->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
@@ -161,7 +166,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
    rpTransparent->AddTextureImage("colorTex", scene.GetColorMaterialCount(), BindLevel::PER_MATERIAL, VK_SHADER_STAGE_FRAGMENT_BIT);
    rpTransparent->AddColorAttachment("output");
    rpTransparent->AddTextureImage("shadowmap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
-   
+   rpTransparent->AddTextureImage("normalMap", 1, BindLevel::PER_PASS, VK_SHADER_STAGE_FRAGMENT_BIT);
+
    rpTransparent->AddVertexShader("simple_vert");
    rpTransparent->AddFragmentShader("simple_frag");
    rpTransparent->SetRenderFunction(RenderStepTransparent);
@@ -175,7 +181,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
        .SetDstAlphaBlendFactor(0, VK_BLEND_FACTOR_CONSTANT_ALPHA)
        .SetAlphaBlendOp(0, VK_BLEND_OP_ADD)
        .SetBlendConstant3(0.35f);
-
+       */
     // ------- Skybox Pass -------
     RenderPass* rpSkybox = rg.CreateRenderPass("Skybox", true);
     rpSkybox->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
@@ -201,7 +207,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	char* lightPropertiesUbo = rg.GetPtrToVisibleBuffer("light_properties");
 
     scene.UploadObjectTransforms(objectUbo);
-    scene.UploadTextureData(&renderer, rg.GetImage("colorTex"));
+    scene.UploadTextureData(&renderer, rg.GetImage("colorTex"), Material::BaseColor);
+	scene.UploadTextureData(&renderer, rg.GetImage("normalMap"), Material::NormalMap);
     CreateSkybox(SKYBOX_WIDTH, SKYBOX_HEIGHT, rg.GetImage("skybox_tex"), &renderer);
     RenderingData rd = scene.GetRenderingData();
 

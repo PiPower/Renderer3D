@@ -15,6 +15,7 @@ layout(set = 0, binding = 2) uniform  LightProperties
 } lightProps;
 
 layout(set = 0, binding = 3) uniform sampler2D shadowmap;
+layout(set = 0, binding = 4) uniform sampler2DArray normalMap;
 layout(set = 1, binding = 0) uniform sampler2DArray diffuseMaps;
 
 layout(location = 0) in vec3 faceNormal;
@@ -54,6 +55,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {
+    vec4 normalVec = texture(normalMap, vec3(texCoord.x, texCoord.y, pc.textureId.x));
     vec4 tex = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x));
     vec3 color = tex.rgb;
     float shadow = ShadowCalculation(worldPosLightCoord);

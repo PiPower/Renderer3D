@@ -13,14 +13,15 @@ static void imgLoadThread(
     std::vector<Material>* materials,
     const std::string& rootPath,
     char* stagingPtr,
-    size_t imgSize)
+    size_t imgSize,
+    Material::PathType materialType)
 {
-    if (materials->at(i).baseColorPath == "")
+    if (materials->at(i).imagePaths[materialType] == "")
     {
         return;
     }
 
-    std::string filePath = rootPath + materials->at(i).baseColorPath;
+    std::string filePath = rootPath + materials->at(i).imagePaths[materialType];
     int x, y, comp;
     int forceRGBA = 4;
     stbi_uc* imgData = stbi_load(filePath.c_str(), &x, &y, &comp, forceRGBA);
@@ -33,7 +34,7 @@ Scene::Scene(
     const std::string& rootPath,
     const std::string& sceneName)
     :
-    rootPath(rootPath), sceneName(sceneName), uboOffset(0), colorMaterials(0)
+	rootPath(rootPath), sceneName(sceneName), uboOffset(0), colorMaterials(0), normalMaps(0)
 {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(rootPath + sceneName, 
@@ -50,7 +51,7 @@ Scene::Scene(
         aiMaterial* processedMaterial = scene->mMaterials[i];
         aiString baseColor, normals, path;
         aiReturn ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColor);
-        ret = processedMaterial->GetTexture(aiTextureType_BASE_COLOR, 0, &normals);
+        ret = processedMaterial->GetTexture(aiTextureType_NORMALS, 0, &normals);
         aiString d = processedMaterial->GetName();
         float opacity = 1.0f;
         processedMaterial->Get(AI_MATKEY_OPACITY, opacity);
@@ -60,22 +61,42 @@ Scene::Scene(
         {
             materialColorIdx = colorMaterials++;
         }
-        materials.emplace_back(processedMaterial->GetName().C_Str(), baseColor.C_Str(), TextureDesc{}, normals.C_Str(), materialColorIdx, opacity);
+
+        uint32_t materialNormalIdx = std::numeric_limits<uint32_t>::max();
+        if (normals.length != 0)
+        {
+            materialNormalIdx = normalMaps++;
+        }
+        std::array<std::string, 2> imagePaths;
+        imagePaths[Material::BaseColor] = baseColor.C_Str();
+        imagePaths[Material::NormalMap] = normals.C_Str();
+        materials.emplace_back(processedMaterial->GetName().C_Str(), std::move(imagePaths), TextureDesc{}, TextureDesc{}, materialColorIdx, materialNormalIdx, opacity);
         if (materials.back().name.length() == 0)
         {
             continue;
         }
 
-        TextureDesc tex;
+        TextureDesc tex, normalMap;
         int ok;
-        std::string pathName = rootPath + materials.back().baseColorPath;
+        std::string pathName = rootPath + materials.back().imagePaths[Material::BaseColor];
+        std::string normalMapPath = rootPath + materials.back().imagePaths[Material::NormalMap];
+
         ok = stbi_info(pathName.c_str(), &tex.width, &tex.height, &tex.components);
         materials.back().colorTex = tex;
+
+        ok = stbi_info(normalMapPath.c_str(), &normalMap.width, &normalMap.height, &normalMap.components);
+        materials.back().normalMap = normalMap;
 
         if (tex.height != materials[0].colorTex.height ||
             tex.width != materials[0].colorTex.width)
         {
             throw std::runtime_error("Textures have unequal dimensions\n");
+        }
+
+        if (normalMap.height != materials[0].normalMap.height ||
+            normalMap.width != materials[0].normalMap.width)
+        {
+            throw std::runtime_error("Normal maps have unequal dimensions\n");
         }
     }
 
@@ -183,7 +204,8 @@ void Scene::parseObjectTree(
 
 void Scene::UploadTextureData(
     Renderer* renderer, 
-    Image* imageResource)
+    Image* imageResource,
+    Material::PathType materialType)
 {
     uint64_t stagingSize = renderer->GetStagingSize();
     uint64_t imgSize = materials[0].colorTex.width * materials[0].colorTex.height * 4;
@@ -204,13 +226,13 @@ void Scene::UploadTextureData(
             while (loadedImages < imgsPerIteraiton && 
                    currMaterial < materials.size())
             {
-                if (materials[currMaterial].baseColorPath == "")
+                if (materials[currMaterial].imagePaths[materialType] == "")
                 {
                     currMaterial++;
                     continue;
                 }
 
-                threadPool.emplace_back(imgLoadThread, currMaterial, &materials, rootPath, stagingPtr + loadedImages * imgSize, imgSize);
+                threadPool.emplace_back(imgLoadThread, currMaterial, &materials, rootPath, stagingPtr + loadedImages * imgSize, imgSize, materialType);
                 loadedImages++;
                 currMaterial++;
             }
