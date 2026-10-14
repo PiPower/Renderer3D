@@ -38,7 +38,9 @@ Scene::Scene(
 {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(rootPath + sceneName, 
-                        aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_MakeLeftHanded | aiProcess_FlipWindingOrder);
+                        aiProcess_Triangulate | aiProcess_FlipUVs | 
+                        aiProcess_MakeLeftHanded | aiProcess_FlipWindingOrder |
+                        aiProcess_CalcTangentSpace);
 
     if (scene == nullptr)
     {
@@ -113,6 +115,8 @@ Scene::Scene(
 
     vertices.resize(vertexCount);
     normals.resize(vertexCount);
+	tangents.resize(vertexCount);
+	biTangents.resize(vertexCount);
     texCoords.resize(vertexCount);
 	indecies.resize(indexCount);
 	size_t vecOffest = 0;
@@ -125,6 +129,14 @@ Scene::Scene(
             vertices.at(vecOffest + j).x = scene->mMeshes[i]->mVertices[j].x;
             vertices.at(vecOffest + j).y = scene->mMeshes[i]->mVertices[j].y;
             vertices.at(vecOffest + j).z = scene->mMeshes[i]->mVertices[j].z;
+
+            tangents.at(vecOffest + j).x = scene->mMeshes[i]->mTangents[j].x;
+            tangents.at(vecOffest + j).y = scene->mMeshes[i]->mTangents[j].y;
+            tangents.at(vecOffest + j).z = scene->mMeshes[i]->mTangents[j].z;
+
+            biTangents.at(vecOffest + j).x = scene->mMeshes[i]->mBitangents[j].x;
+            biTangents.at(vecOffest + j).y = scene->mMeshes[i]->mBitangents[j].y;
+            biTangents.at(vecOffest + j).z = scene->mMeshes[i]->mBitangents[j].z;
 
             normals.at(vecOffest + j).x = scene->mMeshes[i]->mNormals[j].x;
             normals.at(vecOffest + j).y = scene->mMeshes[i]->mNormals[j].y;

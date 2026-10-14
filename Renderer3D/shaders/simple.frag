@@ -18,10 +18,10 @@ layout(set = 0, binding = 3) uniform sampler2D shadowmap;
 layout(set = 0, binding = 4) uniform sampler2DArray normalMap;
 layout(set = 1, binding = 0) uniform sampler2DArray diffuseMaps;
 
-layout(location = 0) in vec3 faceNormal;
-layout(location = 1) in vec2 texCoord; 
-layout(location = 2) in vec4 worldPos;
-layout(location = 3) in vec4 worldPosLightCoord;
+layout(location = 0) in vec2 texCoord; 
+layout(location = 1) in vec4 worldPos;
+layout(location = 2) in vec4 worldPosLightCoord;
+layout(location = 3) in vec3 tangentDirPos;
 
 layout(location = 0) out vec4 outColor;
 
@@ -55,21 +55,22 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {
-    vec4 normalVec = texture(normalMap, vec3(texCoord.x, texCoord.y, pc.textureId.x));
-    vec4 tex = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x));
-    vec3 color = tex.rgb;
-    float shadow = ShadowCalculation(worldPosLightCoord);
-    vec3 ambient = lightProps.color.rgb * lightProps.color.w;
-    float diffCoeff = max(dot(faceNormal, -lightProps.dir.xyz), 0.0);
-    vec3 diffuse = diffCoeff * lightProps.color.rgb;
-    // if ocluded disable diffuse
-    if(shadow  > 0.99)
-    {
-        diffuse = diffuse * 0;
-    }
+    vec3 normalVec = texture(normalMap, vec3(texCoord.x, texCoord.y, pc.textureId.x)).rgb;
+    normalVec = normalize(normalVec * 2.0 - 1.0);
 
-    outColor.rgb = ( (ambient + (1.0 - shadow)) + diffuse) * color;
-    outColor.a = tex.a;
+    vec4 albedo = texture(diffuseMaps, vec3(texCoord.x, texCoord.y, pc.textureId.x));
+    vec3 color = albedo.rgb;
+    float shadow = ShadowCalculation(worldPosLightCoord);
+    float visibile = 1.0 - shadow;
+
+    vec3 ambient = lightProps.color.rgb * lightProps.color.w;
+    vec3 lightDirTS = normalize(tangentDirPos);
+    float diffCoeff = max(dot(normalVec, -lightDirTS), 0.0);
+
+    vec3 diffuse = diffCoeff * lightProps.color.rgb;
+
+    vec3 lighting = ambient + visibile * diffuse;
+    outColor = vec4(lighting * color, albedo.a);
 
     //outColor = vec4(texCoord.x, texCoord.y, 0, 1.0);
  /*

@@ -93,6 +93,10 @@ public:
 
 	inline uint64_t GetNormalsByteSize() { return vertexCount * sizeof(Vec3); }
 
+	inline uint64_t GetTangentsByteSize() { return vertexCount * sizeof(Vec3); }
+
+	inline uint64_t GetBiTangentsByteSize() { return vertexCount * sizeof(Vec3); }
+
 	inline uint64_t GetTexByteSize() { return vertexCount * sizeof(Vec2); }
 
 	inline uint64_t GetIndexCount() { return indexCount; }
@@ -100,6 +104,10 @@ public:
 	inline uint64_t GetIndexByteSize() { return indexCount * sizeof(uint32_t); }
 
 	inline Vec3* GetVertexPtr() { return vertices.data(); }
+
+	inline Vec3* GetTangentsPtr() { return tangents.data(); }
+	
+	inline Vec3* GetBiTangentsPtr() { return biTangents.data(); }
 
 	inline Vec3* GetNormalsPtr() { return normals.data(); }
 
@@ -121,6 +129,8 @@ private:
 	size_t vertexCount = 0;
 	size_t indexCount = 0;
 	std::vector<Vec3> vertices;
+	std::vector<Vec3> tangents;
+	std::vector<Vec3> biTangents;
 	std::vector<Vec3> normals;
 	std::vector<Vec2> texCoords;
 	std::vector<uint32_t> indecies;

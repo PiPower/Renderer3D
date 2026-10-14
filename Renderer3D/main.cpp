@@ -95,6 +95,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     RenderGraph rg;
     rg.DescribeBuffer("vertex", scene.GetVertexByteSize());
+    rg.DescribeBuffer("tangents", scene.GetTangentsByteSize());
+    rg.DescribeBuffer("bitangents", scene.GetBiTangentsByteSize());
     rg.DescribeBuffer("normal", scene.GetNormalsByteSize());
     rg.DescribeBuffer("texcoord", scene.GetTexByteSize());
     rg.DescribeBuffer("index", scene.GetIndexByteSize());
@@ -131,6 +133,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	rpSimple->AddVertexBuffer("vertex", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
     rpSimple->AddVertexBuffer("normal", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
     rpSimple->AddVertexBuffer("texcoord", sizeof(Vec2), { VK_FORMAT_R32G32_SFLOAT }, { 0u });
+	rpSimple->AddVertexBuffer("tangents", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });
+	rpSimple->AddVertexBuffer("bitangents", sizeof(Vec3), { VK_FORMAT_R32G32B32_SFLOAT }, { 0u });  
     rpSimple->AddIndexBuffer("index", VK_INDEX_TYPE_UINT32);
     rpSimple->AddDepthImage("depth_image");
     rpSimple->AddUniformBuffer("camera", 2 * trsfMatrixSize, BindLevel::PER_PASS);
@@ -200,6 +204,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     rg.UploadDataToBuffer("normal", scene.GetNormalsByteSize(), (const char*)scene.GetNormalsPtr(), 0, 0);
     rg.UploadDataToBuffer("texcoord", scene.GetTexByteSize(), (const char*)scene.GetTexPtr(), 0, 0);
     rg.UploadDataToBuffer("index", scene.GetIndexByteSize(), (const char*)scene.GetIndexPtr(), 0, 0);
+	rg.UploadDataToBuffer("tangents", scene.GetTangentsByteSize(), (const char*)scene.GetTangentsPtr(), 0, 0);
+	rg.UploadDataToBuffer("bitangents", scene.GetBiTangentsByteSize(), (const char*)scene.GetBiTangentsPtr(), 0, 0);
 
     char* cameraUbo = rg.GetPtrToVisibleBuffer("camera");
     char* lightUbo = rg.GetPtrToVisibleBuffer("light_camera");
@@ -229,7 +235,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	lightCam.UpdateOrthographicProjMatrix(30, 90, 0.3f, 100.0f);
 
     LightProperties lightProps;
-    lightProps.color = Eigen::Vector4f(0.9, 0.9, 0.9, 0.7);
+    lightProps.color = Eigen::Vector4f(1, 1, 1, 0.5);
 	lightProps.pos = Eigen::Vector4f(lightPos.x(), lightPos.y(), lightPos.z(), 1);  
 	lightProps.dir = Eigen::Vector4f(lightDir.x(), lightDir.y(), lightDir.z(), 0);
     lightProps.dir.normalize();
